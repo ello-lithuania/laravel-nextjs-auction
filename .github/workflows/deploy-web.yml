@@ -48,7 +48,9 @@ jobs:
       - name: Setup SSH key
         run: |
           mkdir -p "$HOME/.ssh"
-          printf '%s\n' "${{ secrets.SSH_PRIVATE_KEY }}" > "$HOME/.ssh/deploy_key"
+          # Key is base64-encoded in SSH_KEY_B64 so paste can't corrupt it
+          # (avoids the "error in libcrypto" from CRLF/whitespace). Decode here.
+          echo "${{ secrets.SSH_KEY_B64 }}" | base64 -d > "$HOME/.ssh/deploy_key"
           chmod 600 "$HOME/.ssh/deploy_key"
 
       - name: Rsync static site to public_html

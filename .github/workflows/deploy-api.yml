@@ -24,9 +24,10 @@ jobs:
       - name: Setup SSH key
         run: |
           mkdir -p "$HOME/.ssh"
-          # printf guarantees a trailing newline even if the secret was pasted
-          # without one (a missing newline => "error in libcrypto").
-          printf '%s\n' "${{ secrets.SSH_PRIVATE_KEY }}" > "$HOME/.ssh/deploy_key"
+          # The key is stored base64-encoded in the SSH_KEY_B64 secret so that
+          # copy/paste can't corrupt it (no CRLF / whitespace issues that cause
+          # "error in libcrypto"). Decode it back to the real private key here.
+          echo "${{ secrets.SSH_KEY_B64 }}" | base64 -d > "$HOME/.ssh/deploy_key"
           chmod 600 "$HOME/.ssh/deploy_key"
 
       - name: Rsync Laravel app to server
