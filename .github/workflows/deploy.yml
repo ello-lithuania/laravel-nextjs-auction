@@ -80,7 +80,9 @@ jobs:
           server-dir: /laravel-api/
           protocol: ftps
           port: 21
-          timeout: 120000
+          # Long control-socket timeout: the first sync into laravel-api/ is slow
+          # over FTPS (the dir also holds a big vendor/ from the SSH deploy).
+          timeout: 600000
           # Server-managed things are never overwritten/removed:
           exclude: |
             **/.git*
