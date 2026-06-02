@@ -34,12 +34,14 @@ jobs:
         # NEXT_PUBLIC_* are baked into the static bundle at build time. Set them
         # as GitHub repository Variables (Settings -> Secrets and variables ->
         # Actions -> Variables). They are public (they ship to the browser).
+        # Defaults baked in so a Web deploy works with no extra config. Override
+        # any of them later via repository Variables if the domain changes.
         env:
-          NEXT_PUBLIC_API_URL: ${{ vars.NEXT_PUBLIC_API_URL }}
-          NEXT_PUBLIC_REVERB_APP_KEY: ${{ vars.NEXT_PUBLIC_REVERB_APP_KEY }}
-          NEXT_PUBLIC_REVERB_HOST: ${{ vars.NEXT_PUBLIC_REVERB_HOST }}
-          NEXT_PUBLIC_REVERB_PORT: ${{ vars.NEXT_PUBLIC_REVERB_PORT }}
-          NEXT_PUBLIC_REVERB_SCHEME: ${{ vars.NEXT_PUBLIC_REVERB_SCHEME }}
+          NEXT_PUBLIC_API_URL: ${{ vars.NEXT_PUBLIC_API_URL || 'https://plum-mouse-764078.hostingersite.com/backend' }}
+          NEXT_PUBLIC_REVERB_APP_KEY: ${{ vars.NEXT_PUBLIC_REVERB_APP_KEY || 'auction-key' }}
+          NEXT_PUBLIC_REVERB_HOST: ${{ vars.NEXT_PUBLIC_REVERB_HOST || 'plum-mouse-764078.hostingersite.com' }}
+          NEXT_PUBLIC_REVERB_PORT: ${{ vars.NEXT_PUBLIC_REVERB_PORT || '443' }}
+          NEXT_PUBLIC_REVERB_SCHEME: ${{ vars.NEXT_PUBLIC_REVERB_SCHEME || 'https' }}
         run: npm run build
 
       - name: Bundle server .htaccess into the output
