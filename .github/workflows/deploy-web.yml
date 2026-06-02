@@ -1,6 +1,7 @@
 name: Deploy Web (Next static) to Hostinger
 
 # Builds the Next.js app as a static export and rsyncs it into public_html.
+# Only ONE secret is needed: SSH_KEY_B64 (base64-encoded private key).
 on:
   push:
     branches: [main]
@@ -12,6 +13,13 @@ on:
 concurrency:
   group: deploy-web
   cancel-in-progress: true
+
+env:
+  SSH_HOST: "46.202.142.44"
+  SSH_PORT: "65002"
+  SSH_USER: "u984572075"
+  WEB_DIR: "/home/u984572075/domains/plum-mouse-764078.hostingersite.com/public_html"
+  SSH_FLAGS: "-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=20"
 
 jobs:
   deploy:
@@ -31,11 +39,6 @@ jobs:
 
       - name: Build static export
         working-directory: web
-        # NEXT_PUBLIC_* are baked into the static bundle at build time. Set them
-        # as GitHub repository Variables (Settings -> Secrets and variables ->
-        # Actions -> Variables). They are public (they ship to the browser).
-        # Defaults baked in so a Web deploy works with no extra config. Override
-        # any of them later via repository Variables if the domain changes.
         env:
           NEXT_PUBLIC_API_URL: ${{ vars.NEXT_PUBLIC_API_URL || 'https://plum-mouse-764078.hostingersite.com/backend' }}
           NEXT_PUBLIC_REVERB_APP_KEY: ${{ vars.NEXT_PUBLIC_REVERB_APP_KEY || 'auction-key' }}
@@ -50,15 +53,21 @@ jobs:
       - name: Setup SSH key
         run: |
           mkdir -p "$HOME/.ssh"
-          # Key is base64-encoded in SSH_KEY_B64 so paste can't corrupt it
-          # (avoids the "error in libcrypto" from CRLF/whitespace). Decode here.
           echo "${{ secrets.SSH_KEY_B64 }}" | base64 -d > "$HOME/.ssh/deploy_key"
           chmod 600 "$HOME/.ssh/deploy_key"
 
+      - name: Diagnose connectivity
+        run: |
+          echo "Runner public IP : $(curl -s --max-time 10 https://api.ipify.org || echo unknown)"
+          echo "Target           : $SSH_HOST:$SSH_PORT"
+          if timeout 12 bash -c "cat < /dev/null > /dev/tcp/$SSH_HOST/$SSH_PORT" 2>/dev/null; then
+            echo "TCP connect      : OPEN  ✅"
+          else
+            echo "TCP connect      : BLOCKED/timeout  ❌"
+          fi
+
       - name: Rsync static site to public_html
         run: |
-          # --delete keeps public_html in sync; --exclude protects the `backend`
-          # symlink (-> Laravel public) that serves the API on the same domain.
           rsync -rltgoDzvO --delete --exclude='backend' \
-            -e "ssh -p ${{ secrets.SSH_PORT }} -i $HOME/.ssh/deploy_key -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null" \
-            web/out/ "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:${{ secrets.WEB_TARGET }}/"
+            -e "ssh -p $SSH_PORT -i $HOME/.ssh/deploy_key $SSH_FLAGS" \
+            web/out/ "$SSH_USER@$SSH_HOST:$WEB_DIR/"

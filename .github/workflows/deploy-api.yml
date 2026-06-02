@@ -2,7 +2,11 @@ name: Deploy API (Laravel) to Hostinger
 
 # Rsyncs the Laravel app into a folder OUTSIDE public_html, then runs composer +
 # migrations over SSH. The API is served as a subpath of the main domain:
-# public_html/backend is a symlink to <API_TARGET>/public.
+# public_html/backend is a symlink to <API_DIR>/public.
+#
+# Only ONE secret is needed: SSH_KEY_B64 (the base64-encoded private key).
+# The non-secret connection details are kept here as env so there is nothing
+# else to misconfigure. Edit them if the hosting account / domain changes.
 on:
   push:
     branches: [main]
@@ -15,6 +19,14 @@ concurrency:
   group: deploy-api
   cancel-in-progress: false
 
+env:
+  SSH_HOST: "46.202.142.44"
+  SSH_PORT: "65002"
+  SSH_USER: "u984572075"
+  API_DIR: "/home/u984572075/laravel-api"
+  WEB_DIR: "/home/u984572075/domains/plum-mouse-764078.hostingersite.com/public_html"
+  SSH_FLAGS: "-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=20"
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
@@ -24,11 +36,19 @@ jobs:
       - name: Setup SSH key
         run: |
           mkdir -p "$HOME/.ssh"
-          # The key is stored base64-encoded in the SSH_KEY_B64 secret so that
-          # copy/paste can't corrupt it (no CRLF / whitespace issues that cause
-          # "error in libcrypto"). Decode it back to the real private key here.
           echo "${{ secrets.SSH_KEY_B64 }}" | base64 -d > "$HOME/.ssh/deploy_key"
           chmod 600 "$HOME/.ssh/deploy_key"
+          echo "Decoded key starts with: $(head -1 "$HOME/.ssh/deploy_key")"
+
+      - name: Diagnose connectivity
+        run: |
+          echo "Runner public IP : $(curl -s --max-time 10 https://api.ipify.org || echo unknown)"
+          echo "Target           : $SSH_HOST:$SSH_PORT"
+          if timeout 12 bash -c "cat < /dev/null > /dev/tcp/$SSH_HOST/$SSH_PORT" 2>/dev/null; then
+            echo "TCP connect      : OPEN  ✅ (firewall is NOT blocking the runner)"
+          else
+            echo "TCP connect      : BLOCKED/timeout  ❌ (Hostinger firewall is blocking this runner IP)"
+          fi
 
       - name: Rsync Laravel app to server
         run: |
@@ -36,18 +56,15 @@ jobs:
             --exclude='/.env' --exclude='/vendor/' --exclude='/node_modules/' \
             --exclude='/storage/' --exclude='/database/database.sqlite' \
             --exclude='/.git/' --exclude='/tests/' \
-            -e "ssh -p ${{ secrets.SSH_PORT }} -i $HOME/.ssh/deploy_key -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null" \
-            api/ "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:${{ secrets.API_TARGET }}/"
+            -e "ssh -p $SSH_PORT -i $HOME/.ssh/deploy_key $SSH_FLAGS" \
+            api/ "$SSH_USER@$SSH_HOST:$API_DIR/"
 
       - name: Composer install, migrate, cache (over SSH)
         run: |
-          ssh -p ${{ secrets.SSH_PORT }} -i "$HOME/.ssh/deploy_key" \
-            -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
-            "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}" \
-            "cd ${{ secrets.API_TARGET }} && \
+          ssh -p "$SSH_PORT" -i "$HOME/.ssh/deploy_key" $SSH_FLAGS \
+            "$SSH_USER@$SSH_HOST" \
+            "ln -sfn '$API_DIR/public' '$WEB_DIR/backend' && \
+             cd '$API_DIR' && \
              composer install --no-dev --optimize-autoloader --no-interaction && \
              php artisan migrate --force && \
-             php artisan config:cache && \
-             (php artisan storage:link || true)"
-          # NOTE: no route:cache — routes/api.php uses closure routes that
-          # cannot be serialized (would error out the deploy).
+             php artisan config:cache"
