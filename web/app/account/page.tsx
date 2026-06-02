@@ -5,8 +5,9 @@ import { useAuth } from "../components/AuthProvider";
 import { useToast } from "../components/ToastProvider";
 
 export default function AccountPage() {
-  const { user, setUser } = useAuth();
+  const { user, token, setUser } = useAuth();
   const { success, error: toastError } = useToast();
+  const apiBase = process.env.NEXT_PUBLIC_API_URL ?? "http://127.0.0.1:8000";
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [currentPassword, setCurrentPassword] = useState("");
@@ -49,11 +50,19 @@ export default function AccountPage() {
       toastError("Slaptažodžiai nesutampa");
       return;
     }
+    if (!token) {
+      toastError("Jūsų sesija nebegalioja. Prisijunkite iš naujo.");
+      return;
+    }
     setSavingPassword(true);
     try {
-      const res = await fetch(`/api/user/password`, {
+      const res = await fetch(`${apiBase}/api/user/password`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+          Authorization: `Bearer ${token}`,
+        },
         body: JSON.stringify({
           current_password: currentPassword,
           password,

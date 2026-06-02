@@ -2,6 +2,8 @@
 
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
 
+const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://127.0.0.1:8000";
+
 type User = {
   id: number;
   name: string;
@@ -11,11 +13,9 @@ type User = {
 
 type AuthContextType = {
   user: User | null;
+  token: string | null;
   setUser: (user: User | null) => void;
-  // The Sanctum token is no longer held in the browser — it lives in an
-  // httpOnly cookie managed by the Next.js BFF routes, so `login` only needs
-  // the (non-secret) user object.
-  login: (user: User) => void;
+  login: (user: User, token: string) => void;
   logout: () => void;
 };
 
@@ -30,6 +30,9 @@ export function useAuth() {
 }
 
 export default function AuthProvider({ children }: { children: React.ReactNode }) {
+  // Static-export build (no Node/BFF), so the SPA holds the Sanctum bearer token
+  // itself and calls the Laravel API directly. The token lives in localStorage;
+  // the strict CSP (set in public_html/.htaccess) is the main XSS mitigation.
   const [user, setUserState] = useState<User | null>(() => {
     if (typeof window === "undefined") {
       return null;
@@ -46,8 +49,13 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
     }
   });
 
-  // Only the non-sensitive user profile is persisted client-side, purely so the
-  // UI can render the logged-in state on reload. The auth token is never here.
+  const [token, setTokenState] = useState<string | null>(() => {
+    if (typeof window === "undefined") {
+      return null;
+    }
+    return window.localStorage.getItem("auctionhub_token");
+  });
+
   useEffect(() => {
     if (typeof window === "undefined") {
       return;
@@ -59,21 +67,39 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
     }
   }, [user]);
 
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+    if (token) {
+      window.localStorage.setItem("auctionhub_token", token);
+    } else {
+      window.localStorage.removeItem("auctionhub_token");
+    }
+  }, [token]);
+
   const value = useMemo(
     () => ({
       user,
+      token,
       setUser: setUserState,
-      login: (nextUser: User) => {
+      login: (nextUser: User, nextToken: string) => {
         setUserState(nextUser);
+        setTokenState(nextToken);
       },
       logout: () => {
-        // Clears the httpOnly cookie server-side (and revokes the token).
-        // Same-origin request, so the cookie is sent automatically.
-        fetch("/api/auth/logout", { method: "POST" }).catch(() => {});
+        // Best-effort token revocation on the server; clear locally regardless.
+        if (token) {
+          fetch(`${apiBaseUrl}/api/logout`, {
+            method: "POST",
+            headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
+          }).catch(() => {});
+        }
         setUserState(null);
+        setTokenState(null);
       },
     }),
-    [user]
+    [user, token]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

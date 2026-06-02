@@ -1,0 +1,45 @@
+# Deploy this file as `public_html/.htaccess` on Hostinger.
+# It replaces the Next.js `headers()` config, which does NOT apply to a static
+# export. The deploy-web GitHub Action copies it into the build output as
+# `.htaccess` automatically.
+
+Options -Indexes
+DirectoryIndex index.html
+
+# ---------------------------------------------------------------------------
+# Security headers
+# ---------------------------------------------------------------------------
+<IfModule mod_headers.c>
+    Header always set X-Frame-Options "DENY"
+    Header always set X-Content-Type-Options "nosniff"
+    Header always set Referrer-Policy "strict-origin-when-cross-origin"
+    Header always set Permissions-Policy "camera=(), microphone=(), geolocation=()"
+    Header always set Strict-Transport-Security "max-age=63072000; includeSubDomains; preload"
+    Header unset X-Powered-By
+
+    # Content-Security-Policy.
+    # NOTE: a static Next.js export injects inline bootstrap scripts and cannot
+    # use per-request nonces (no server), so 'unsafe-inline' is required for
+    # script-src here — this is weaker than the BFF build's CSP. The token also
+    # lives in localStorage in this build, so treat XSS hygiene seriously.
+    #
+    # ADJUST connect-src to your real API origin once the subdomain exists,
+    # e.g. replace `https:` with `https://api.plum-mouse-764078.hostingersite.com`
+    # and the matching `wss://...` for the Reverb websocket.
+    Header always set Content-Security-Policy "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'; img-src 'self' data: blob: https:; font-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; connect-src 'self' https: wss:; upgrade-insecure-requests"
+</IfModule>
+
+# ---------------------------------------------------------------------------
+# Caching: hashed Next assets are immutable; HTML should always revalidate.
+# ---------------------------------------------------------------------------
+<IfModule mod_headers.c>
+    <FilesMatch "\.(js|css|woff2?|svg|png|jpg|jpeg|gif|ico)$">
+        Header set Cache-Control "public, max-age=31536000, immutable"
+    </FilesMatch>
+    <FilesMatch "\.html$">
+        Header set Cache-Control "public, max-age=0, must-revalidate"
+    </FilesMatch>
+</IfModule>
+
+# Custom 404 (Next emits 404.html).
+ErrorDocument 404 /404.html
