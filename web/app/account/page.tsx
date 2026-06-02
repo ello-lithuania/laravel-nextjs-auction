@@ -9,8 +9,10 @@ export default function AccountPage() {
   const { success, error: toastError } = useToast();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
+  const [currentPassword, setCurrentPassword] = useState("");
   const [password, setPassword] = useState("");
   const [passwordConfirm, setPasswordConfirm] = useState("");
+  const [savingPassword, setSavingPassword] = useState(false);
 
   if (!user) {
     return (
@@ -34,18 +36,43 @@ export default function AccountPage() {
     success("Jūsų paskyra atnaujinta");
   };
 
-  const handlePasswordSave = () => {
-    if (!password || password.length < 6) {
-      toastError("Slaptažodis turi būti bent 6 simbolių");
+  const handlePasswordSave = async () => {
+    if (!currentPassword) {
+      toastError("Įveskite dabartinį slaptažodį");
+      return;
+    }
+    if (!password || password.length < 8) {
+      toastError("Naujas slaptažodis turi būti bent 8 simbolių");
       return;
     }
     if (password !== passwordConfirm) {
       toastError("Slaptažodžiai nesutampa");
       return;
     }
-    setPassword("");
-    setPasswordConfirm("");
-    success("Slaptažodis atnaujintas (vietoje)");
+    setSavingPassword(true);
+    try {
+      const res = await fetch(`/api/user/password`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          current_password: currentPassword,
+          password,
+          password_confirmation: passwordConfirm,
+        }),
+      });
+      const data = (await res.json().catch(() => null)) as { message?: string } | null;
+      if (!res.ok) {
+        throw new Error(data?.message ?? "Nepavyko pakeisti slaptažodžio.");
+      }
+      setCurrentPassword("");
+      setPassword("");
+      setPasswordConfirm("");
+      success(data?.message ?? "Slaptažodis pakeistas.");
+    } catch (err) {
+      toastError(err instanceof Error ? err.message : "Tinklo klaida.");
+    } finally {
+      setSavingPassword(false);
+    }
   };
 
   return (
@@ -87,9 +114,20 @@ export default function AccountPage() {
             <div className="space-y-5 rounded-[1.75rem] border border-slate-200 bg-slate-50 p-6">
               <h2 className="text-lg font-semibold text-slate-950">Slaptažodis</h2>
               <label className="block text-sm text-slate-700">
+                Dabartinis slaptažodis
+                <input
+                  type="password"
+                  autoComplete="current-password"
+                  className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 outline-none focus:ring-2 focus:ring-sky-300"
+                  value={currentPassword}
+                  onChange={(e) => setCurrentPassword(e.target.value)}
+                />
+              </label>
+              <label className="block text-sm text-slate-700">
                 Naujas slaptažodis
                 <input
                   type="password"
+                  autoComplete="new-password"
                   className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 outline-none focus:ring-2 focus:ring-sky-300"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
@@ -99,17 +137,22 @@ export default function AccountPage() {
                 Pakartokite slaptažodį
                 <input
                   type="password"
+                  autoComplete="new-password"
                   className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 outline-none focus:ring-2 focus:ring-sky-300"
                   value={passwordConfirm}
                   onChange={(e) => setPasswordConfirm(e.target.value)}
                 />
               </label>
+              <p className="text-xs text-slate-500">
+                Bent 8 simboliai, didžiosios ir mažosios raidės bei skaičius.
+              </p>
               <button
                 type="button"
                 onClick={handlePasswordSave}
-                className="rounded-full bg-slate-950 px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-slate-900/10 transition hover:bg-slate-800"
+                disabled={savingPassword}
+                className="rounded-full bg-slate-950 px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-slate-900/10 transition hover:bg-slate-800 disabled:opacity-60"
               >
-                Pakeisti slaptažodį
+                {savingPassword ? "Keičiama..." : "Pakeisti slaptažodį"}
               </button>
             </div>
           </div>

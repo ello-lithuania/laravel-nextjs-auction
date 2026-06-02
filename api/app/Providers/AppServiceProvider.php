@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
@@ -24,6 +25,23 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->configureRateLimiters();
+        $this->configurePasswordResetUrl();
+    }
+
+    /**
+     * Point the password-reset email link at the Next.js SPA page rather than
+     * the (non-existent) Laravel web route. The SPA then POSTs the token back to
+     * /api/reset-password.
+     */
+    private function configurePasswordResetUrl(): void
+    {
+        ResetPassword::createUrlUsing(function ($notifiable, string $token) {
+            $frontend = trim(explode(',', (string) env('FRONTEND_URL', 'http://localhost:3000'))[0]);
+            $frontend = rtrim($frontend, '/');
+            $email = urlencode($notifiable->getEmailForPasswordReset());
+
+            return "{$frontend}/reset-password?token={$token}&email={$email}";
+        });
     }
 
     /**

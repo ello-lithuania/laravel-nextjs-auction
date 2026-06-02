@@ -3,6 +3,7 @@
 use App\Http\Controllers\AuctionController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\ChatController;
+use App\Http\Controllers\PasswordResetController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Broadcast;
 use Illuminate\Support\Facades\Route;
@@ -20,11 +21,14 @@ Route::middleware('throttle:public')->group(function () {
 Route::middleware('throttle:auth')->group(function () {
     Route::post('/register', [AuthController::class, 'register']);
     Route::post('/login', [AuthController::class, 'login']);
+    Route::post('/forgot-password', [PasswordResetController::class, 'forgotPassword']);
+    Route::post('/reset-password', [PasswordResetController::class, 'resetPassword']);
 });
 
 // Authenticated (Sanctum token)
 Route::middleware(['auth:sanctum', 'throttle:authenticated'])->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
+    Route::post('/user/password', [AuthController::class, 'updatePassword']);
     Route::post('/auctions/{auction}/bid', [AuctionController::class, 'bid']);
     Route::get('/user', fn (Request $request) => $request->user());
 

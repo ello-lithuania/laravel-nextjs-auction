@@ -115,6 +115,7 @@ export default function LoginPage() {
           </button>
           <a href="/register" className="text-sm text-slate-600 hover:underline">Neturite paskyros? Registracija</a>
         </div>
+        <a href="/forgot-password" className="block text-sm text-slate-500 hover:underline">Pamiršote slaptažodį?</a>
       </form>
     </div>
   );
