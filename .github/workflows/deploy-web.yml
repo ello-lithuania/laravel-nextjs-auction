@@ -1,0 +1,59 @@
+name: Deploy Web (Next static) to Hostinger
+
+# Builds the Next.js app as a static export and rsyncs it into public_html.
+on:
+  push:
+    branches: [main]
+    paths:
+      - "web/**"
+      - ".github/workflows/deploy-web.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-web
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install dependencies
+        working-directory: web
+        run: npm ci
+
+      - name: Build static export
+        working-directory: web
+        # NEXT_PUBLIC_* are baked into the static bundle at build time. Set them
+        # as GitHub repository Variables (Settings -> Secrets and variables ->
+        # Actions -> Variables). They are not secret (they ship to the browser).
+        env:
+          NEXT_PUBLIC_API_URL: ${{ vars.NEXT_PUBLIC_API_URL }}
+          NEXT_PUBLIC_REVERB_APP_KEY: ${{ vars.NEXT_PUBLIC_REVERB_APP_KEY }}
+          NEXT_PUBLIC_REVERB_HOST: ${{ vars.NEXT_PUBLIC_REVERB_HOST }}
+          NEXT_PUBLIC_REVERB_PORT: ${{ vars.NEXT_PUBLIC_REVERB_PORT }}
+          NEXT_PUBLIC_REVERB_SCHEME: ${{ vars.NEXT_PUBLIC_REVERB_SCHEME }}
+        run: npm run build
+
+      - name: Bundle server .htaccess into the output
+        run: cp web/deploy/public_html.htaccess web/out/.htaccess
+
+      - name: Deploy to public_html via rsync over SSH
+        uses: easingthemes/ssh-deploy@v5.1.0
+        with:
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          REMOTE_HOST: ${{ secrets.SSH_HOST }}
+          REMOTE_USER: ${{ secrets.SSH_USER }}
+          REMOTE_PORT: ${{ secrets.SSH_PORT }}
+          SOURCE: "web/out/"
+          TARGET: ${{ secrets.WEB_TARGET }} # e.g. /home/u123456789/domains/plum-mouse-764078.hostingersite.com/public_html
+          # --delete keeps public_html in sync with the build (removes stale
+          # hashed assets). public_html must be dedicated to this frontend.
+          ARGS: "-rltgoDzvO --delete"

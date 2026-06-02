@@ -1,3 +1,6 @@
+"use client"
+
+import { useEffect, useState } from "react";
 import AccountMenu from "./components/AccountMenu";
 import Link from "next/link";
 import { demoAuctions } from "./data/demoAuctions";
@@ -38,56 +41,80 @@ const agents = [
 
 const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://127.0.0.1:8000";
 
+type Offer = {
+  id: number;
+  slug: string;
+  title: string;
+  category: string;
+  location: string;
+  badge: string;
+  price: string;
+  endsAt: string | null;
+  subtitle: string;
+  imageUrl: string;
+  gallery: string[];
+};
+
 const formatPrice = (value: number | string) =>
   new Intl.NumberFormat("lt-LT", {
     style: "currency",
     currency: "EUR",
   }).format(Number(value));
 
-async function getAuctions() {
-  try {
-    const response = await fetch(`${apiBaseUrl}/api/auctions`, {
-      cache: "no-store",
-    });
-
-    if (!response.ok) {
-      throw new Error("Auction API failed");
-    }
-
-    const data = await response.json();
-
-    return Array.isArray(data)
-      ? data.map((auction, index) => ({
-          id: auction.id ?? index,
-          slug: auction.slug ?? String(auction.id ?? index),
-          title: auction.title,
-          category: auction.category,
-          location: auction.location,
-          badge: statusLabel(auction.status),
-          price: formatPrice(auction.current_price),
-          endsAt: auction.ends_at
-            ? new Date(auction.ends_at).toLocaleString("lt-LT", {
-                day: "numeric",
-                month: "short",
-                hour: "2-digit",
-                minute: "2-digit",
-              })
-            : null,
-          subtitle: auction.description ? auction.description.slice(0, 70) + "..." : auction.category,
-          imageUrl: auction.image_url ?? (Array.isArray(auction.gallery) ? auction.gallery[0] ?? "" : ""),
-          gallery: Array.isArray(auction.gallery) ? auction.gallery : [],
-        }))
-      : demoAuctions;
-  } catch {
-    return demoAuctions;
-  }
+function mapAuctions(data: unknown[]): Offer[] {
+  return data.map((raw, index) => {
+    const auction = raw as Record<string, unknown>;
+    return {
+      id: (auction.id as number) ?? index,
+      slug: (auction.slug as string) ?? String(auction.id ?? index),
+      title: auction.title as string,
+      category: auction.category as string,
+      location: auction.location as string,
+      badge: statusLabel(auction.status as string),
+      price: formatPrice(auction.current_price as number | string),
+      endsAt: auction.ends_at
+        ? new Date(auction.ends_at as string).toLocaleString("lt-LT", {
+            day: "numeric",
+            month: "short",
+            hour: "2-digit",
+            minute: "2-digit",
+          })
+        : null,
+      subtitle: auction.description
+        ? (auction.description as string).slice(0, 70) + "..."
+        : (auction.category as string),
+      imageUrl:
+        (auction.image_url as string) ??
+        (Array.isArray(auction.gallery) ? (auction.gallery[0] as string) ?? "" : ""),
+      gallery: Array.isArray(auction.gallery) ? (auction.gallery as string[]) : [],
+    };
+  });
 }
 
-export default async function Home() {
-  const auctions = await getAuctions();
+export default function Home() {
+  // Static export: no server data fetching. We start from the demo data and
+  // fetch live auctions from the Laravel API on the client.
+  const [auctions, setAuctions] = useState<Offer[]>(demoAuctions);
+
+  useEffect(() => {
+    let active = true;
+    fetch(`${apiBaseUrl}/api/auctions`, { headers: { Accept: "application/json" } })
+      .then((res) => (res.ok ? res.json() : Promise.reject(new Error("Auction API failed"))))
+      .then((data) => {
+        if (active && Array.isArray(data) && data.length > 0) {
+          setAuctions(mapAuctions(data));
+        }
+      })
+      .catch(() => {
+        // Keep the demo data on failure.
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
+
   const topOffers = auctions.slice(0, 16);
-  const todaysAdds = auctions.slice(4, 7);
-  const heroGallery: string[] = (topOffers[0]?.gallery?.slice(0, 3) ?? []) as string[];
+  const heroGallery: string[] = topOffers[0]?.gallery?.slice(0, 3) ?? [];
 
   return (
     <main className="min-h-screen bg-slate-50 text-slate-950">
@@ -206,7 +233,7 @@ export default async function Home() {
           </div>
           <div className="mt-8 grid gap-6 xl:grid-cols-4">
             {topOffers.map((offer) => (
-              <Link key={offer.id} href={`/auction/${offer.slug}`} className="overflow-hidden rounded-[1.75rem] border border-slate-200 bg-slate-50 shadow-sm transition hover:-translate-y-1 hover:shadow-md">
+              <Link key={offer.id} href={`/auction/?slug=${encodeURIComponent(offer.slug)}`} className="overflow-hidden rounded-[1.75rem] border border-slate-200 bg-slate-50 shadow-sm transition hover:-translate-y-1 hover:shadow-md">
                 {offer.imageUrl ? (
                   <div className="relative overflow-hidden">
                     <img src={offer.imageUrl} alt={offer.title} className="h-[220px] w-full object-cover" />

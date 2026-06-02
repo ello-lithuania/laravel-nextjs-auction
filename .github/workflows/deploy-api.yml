@@ -1,0 +1,53 @@
+name: Deploy API (Laravel) to Hostinger
+
+# Rsyncs the Laravel app into a folder OUTSIDE public_html, then runs composer +
+# migrations over SSH. The web server's document root for the API subdomain must
+# point at <API_TARGET>/public.
+on:
+  push:
+    branches: [main]
+    paths:
+      - "api/**"
+      - ".github/workflows/deploy-api.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-api
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Rsync Laravel app to server
+        uses: easingthemes/ssh-deploy@v5.1.0
+        with:
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          REMOTE_HOST: ${{ secrets.SSH_HOST }}
+          REMOTE_USER: ${{ secrets.SSH_USER }}
+          REMOTE_PORT: ${{ secrets.SSH_PORT }}
+          SOURCE: "api/"
+          TARGET: ${{ secrets.API_TARGET }} # e.g. /home/u123456789/laravel-api
+          # No --delete: never touch server-managed files. The excludes below
+          # also protect them in case --delete is added later.
+          ARGS: "-rltgoDzvO"
+          # Server keeps its own .env, vendor (built by composer), storage and DB.
+          EXCLUDE: "/.env, /vendor/, /node_modules/, /storage/, /database/database.sqlite, /.git/, /tests/"
+
+      - name: Composer install, migrate and cache (over SSH)
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          port: ${{ secrets.SSH_PORT }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            set -e
+            cd "${{ secrets.API_TARGET }}"
+            composer install --no-dev --optimize-autoloader --no-interaction
+            php artisan migrate --force
+            php artisan config:cache
+            php artisan route:cache
+            php artisan storage:link || true
