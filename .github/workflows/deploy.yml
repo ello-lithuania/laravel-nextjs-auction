@@ -55,7 +55,7 @@ jobs:
           username: ${{ secrets.FTP_USERNAME }}
           password: ${{ secrets.FTP_PASSWORD }}
           local-dir: ./web/out/
-          server-dir: /domains/plum-mouse-764078.hostingersite.com/public_html/
+          server-dir: /public_html/
           protocol: ftps
           port: 21
           timeout: 60000
