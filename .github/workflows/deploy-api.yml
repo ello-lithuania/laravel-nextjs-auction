@@ -3,12 +3,10 @@ name: Deploy API (Laravel) to Hostinger
 # Runs on a SELF-HOSTED runner (your PC), because Hostinger blocks GitHub's
 # cloud runner IPs. Deploys from your machine's IP, which Hostinger allows.
 # Only secret needed: SSH_KEY_B64 (base64-encoded private key).
+# Manual-only. GitHub-hosted runners are blocked by Hostinger's firewall, and a
+# self-hosted runner is not recommended on a public repo. The recommended deploy
+# method is ./deploy.sh (or double-click deploy.bat) from your machine.
 on:
-  push:
-    branches: [main]
-    paths:
-      - "api/**"
-      - ".github/workflows/deploy-api.yml"
   workflow_dispatch:
 
 concurrency:

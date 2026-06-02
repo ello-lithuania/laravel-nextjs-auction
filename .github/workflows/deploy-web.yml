@@ -3,12 +3,10 @@ name: Deploy Web (Next static) to Hostinger
 # Runs on a SELF-HOSTED runner (your PC). Builds the static export and uploads
 # it to public_html over SSH (tar over ssh; no rsync needed on Windows).
 # Only secret needed: SSH_KEY_B64.
+# Manual-only. GitHub-hosted runners are blocked by Hostinger's firewall, and a
+# self-hosted runner is not recommended on a public repo. The recommended deploy
+# method is ./deploy.sh web (or double-click deploy.bat) from your machine.
 on:
-  push:
-    branches: [main]
-    paths:
-      - "web/**"
-      - ".github/workflows/deploy-web.yml"
   workflow_dispatch:
 
 concurrency:
