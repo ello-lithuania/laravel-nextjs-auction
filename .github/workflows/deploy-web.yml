@@ -1,13 +1,12 @@
 name: Deploy Web (Next static) to Hostinger
 
-# Builds the Next.js app as a static export and rsyncs it into public_html.
-# Only ONE secret is needed: SSH_KEY_B64 (base64-encoded private key).
+# Runs on a SELF-HOSTED runner (your PC). Builds the static export and uploads
+# it to public_html over SSH (tar over ssh; no rsync needed on Windows).
+# Only secret needed: SSH_KEY_B64.
+# Manual-only. GitHub-hosted runners are blocked by Hostinger's firewall, and a
+# self-hosted runner is not recommended on a public repo. The recommended deploy
+# method is ./deploy.sh web (or double-click deploy.bat) from your machine.
 on:
-  push:
-    branches: [main]
-    paths:
-      - "web/**"
-      - ".github/workflows/deploy-web.yml"
   workflow_dispatch:
 
 concurrency:
@@ -23,32 +22,25 @@ env:
 
 jobs:
   deploy:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
+    defaults:
+      run:
+        shell: bash
     steps:
       - uses: actions/checkout@v4
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: npm
-          cache-dependency-path: web/package-lock.json
-
-      - name: Install dependencies
-        working-directory: web
-        run: npm ci
 
       - name: Build static export
         working-directory: web
         env:
+          NEXT_TELEMETRY_DISABLED: "1"
           NEXT_PUBLIC_API_URL: ${{ vars.NEXT_PUBLIC_API_URL || 'https://plum-mouse-764078.hostingersite.com/backend' }}
           NEXT_PUBLIC_REVERB_APP_KEY: ${{ vars.NEXT_PUBLIC_REVERB_APP_KEY || 'auction-key' }}
           NEXT_PUBLIC_REVERB_HOST: ${{ vars.NEXT_PUBLIC_REVERB_HOST || 'plum-mouse-764078.hostingersite.com' }}
           NEXT_PUBLIC_REVERB_PORT: ${{ vars.NEXT_PUBLIC_REVERB_PORT || '443' }}
           NEXT_PUBLIC_REVERB_SCHEME: ${{ vars.NEXT_PUBLIC_REVERB_SCHEME || 'https' }}
-        run: npm run build
-
-      - name: Bundle server .htaccess into the output
-        run: cp web/deploy/public_html.htaccess web/out/.htaccess
+        run: |
+          npm ci
+          npm run build
 
       - name: Setup SSH key
         run: |
@@ -56,18 +48,10 @@ jobs:
           echo "${{ secrets.SSH_KEY_B64 }}" | base64 -d > "$HOME/.ssh/deploy_key"
           chmod 600 "$HOME/.ssh/deploy_key"
 
-      - name: Diagnose connectivity
+      - name: Upload static site to public_html (tar over ssh)
         run: |
-          echo "Runner public IP : $(curl -s --max-time 10 https://api.ipify.org || echo unknown)"
-          echo "Target           : $SSH_HOST:$SSH_PORT"
-          if timeout 12 bash -c "cat < /dev/null > /dev/tcp/$SSH_HOST/$SSH_PORT" 2>/dev/null; then
-            echo "TCP connect      : OPEN  ✅"
-          else
-            echo "TCP connect      : BLOCKED/timeout  ❌"
-          fi
-
-      - name: Rsync static site to public_html
-        run: |
-          rsync -rltgoDzvO --delete --exclude='backend' \
-            -e "ssh -p $SSH_PORT -i $HOME/.ssh/deploy_key $SSH_FLAGS" \
-            web/out/ "$SSH_USER@$SSH_HOST:$WEB_DIR/"
+          cp web/deploy/public_html.htaccess web/out/.htaccess
+          SSH="ssh -p $SSH_PORT -i $HOME/.ssh/deploy_key $SSH_FLAGS $SSH_USER@$SSH_HOST"
+          # tar-extract over the existing files; the `backend` symlink (API) is
+          # left untouched (tar doesn't delete).
+          tar czf - -C web/out . | $SSH "tar xzf - -C '$WEB_DIR'"
