@@ -3,10 +3,15 @@ name: Deploy
 # Deploys over FTPS from a GitHub-hosted runner. (Hostinger blocks SSH from
 # GitHub's cloud IPs, but FTPS works.) Two jobs run in parallel:
 #   - frontend: build the Next.js static export -> public_html
-#   - api:      upload the Laravel code -> ~/laravel-api
+#   - api:      upload the Laravel code -> laravel-api
 #
-# Required secrets: FTP_SERVER, FTP_USERNAME, FTP_PASSWORD
-# (Hostinger hPanel -> Files -> FTP Accounts.)
+# The FTP account must be the one scoped to the dekaukciona.lt domain folder so
+# both /public_html/ and /laravel-api/ resolve correctly.
+#
+# Required secrets: FTP_USERNAME, FTP_PASSWORD (the server IP is hardcoded above
+# since it's public). Get the FTP account in Hostinger hPanel -> Files -> FTP
+# Accounts; it must be scoped to the dekaukciona.lt domain folder (not just
+# public_html) so both /public_html/ and /laravel-api/ are reachable.
 #
 # NOT handled here (rare, run `bash deploy.sh api` from your PC when needed):
 #   - composer install (only when you add/upgrade PHP packages)
@@ -51,7 +56,7 @@ jobs:
       - name: Deploy frontend (FTPS)
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
         with:
-          server: ${{ secrets.FTP_SERVER }}
+          server: 46.202.142.44   # public Hostinger IP (same as deploy.sh); not a secret
           username: ${{ secrets.FTP_USERNAME }}
           password: ${{ secrets.FTP_PASSWORD }}
           local-dir: ./web/out/
@@ -68,7 +73,7 @@ jobs:
       - name: Deploy API (FTPS)
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
         with:
-          server: ${{ secrets.FTP_SERVER }}
+          server: 46.202.142.44   # public Hostinger IP (same as deploy.sh); not a secret
           username: ${{ secrets.FTP_USERNAME }}
           password: ${{ secrets.FTP_PASSWORD }}
           local-dir: ./api/
