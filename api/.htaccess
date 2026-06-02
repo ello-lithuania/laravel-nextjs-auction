@@ -1,0 +1,21 @@
+# Defence-in-depth for when this Laravel app sits under a web server's document
+# root (e.g. the WAMP `www` folder) instead of being served from `public/`.
+#
+# The CORRECT setup is to make `api/public` the document root (vhost/alias) or to
+# run `php artisan serve`, which only ever exposes `public/`. This file is a
+# backstop in case the whole `api/` folder is reachable over HTTP: it blocks the
+# files and directories that must never be downloaded.
+#
+# Note: `php artisan serve` (PHP's built-in server) ignores .htaccess entirely,
+# so this has no effect on the local dev workflow — it only matters under Apache.
+
+Options -Indexes
+
+# Block sensitive files by name (env, the SQLite database, dependency manifests,
+# the console entrypoint) and any dotfile (.env, .git, ...).
+<FilesMatch "(?i)(^\.|\.(env|sqlite|sqlite3|db|lock)$|^(composer\.json|package\.json|artisan)$)">
+    Require all denied
+</FilesMatch>
+
+# Block direct access to the application's internal directories.
+RedirectMatch 403 (?i)/(\.env|\.git|database|storage|bootstrap|config|app|routes|resources|tests|vendor)(/|$)
