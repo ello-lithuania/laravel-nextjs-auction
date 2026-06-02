@@ -54,7 +54,7 @@ type Auction = {
 
 export default function AuctionDetailClient({ auction, slug }: { auction?: Auction; slug?: string }) {
   const toast = useToast();
-  const { user, token, logout } = useAuth();
+  const { user, logout } = useAuth();
   const [auctionState, setAuctionState] = useState<Auction | null>(auction ?? null);
   const [secondsLeft, setSecondsLeft] = useState<number>(0);
   const [bidAmount, setBidAmount] = useState<number>(() =>
@@ -181,7 +181,7 @@ export default function AuctionDetailClient({ auction, slug }: { auction?: Aucti
 
   const handleBid = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!user || !token) {
+    if (!user) {
       toast.error("Prašome prisijungti, kad galėtumėte dalyvauti aukcione.");
       return;
     }
@@ -196,12 +196,13 @@ export default function AuctionDetailClient({ auction, slug }: { auction?: Aucti
     setSaving(true);
     try {
       if (!auctionState) throw new Error("Aukcionas nerastas");
-      const response = await fetch(`${apiBaseUrl}/api/auctions/${auctionState.slug}/bid`, {
+      // Same-origin BFF route: it reads the httpOnly auth cookie and attaches
+      // the bearer token server-side, so no Authorization header here.
+      const response = await fetch(`/api/auctions/${encodeURIComponent(auctionState.slug)}/bid`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Accept: "application/json",
-          Authorization: `Bearer ${token}`,
         },
         // Bidder name/city are taken from the authenticated user server-side.
         body: JSON.stringify({ amount: bidAmount }),

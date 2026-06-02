@@ -24,8 +24,9 @@ export default function LoginPage() {
     }
     setLoading(true);
     try {
-      const apiBase = process.env.NEXT_PUBLIC_API_URL ?? "http://127.0.0.1:8000";
-      const res = await fetch(`${apiBase}/api/login`, {
+      // Goes through the same-origin BFF route, which sets the httpOnly auth
+      // cookie and returns only the user (never the token).
+      const res = await fetch(`/api/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),
@@ -57,10 +58,9 @@ export default function LoginPage() {
       if (data && typeof data === "object" && "user" in data) {
         const parsed = data as {
           user?: { id: number; name: string; email: string; city?: string | null };
-          token?: string;
         };
-        if (parsed.user && parsed.token) {
-          login(parsed.user, parsed.token);
+        if (parsed.user) {
+          login(parsed.user);
         }
       }
       success("Sėkmingai prisijungta");

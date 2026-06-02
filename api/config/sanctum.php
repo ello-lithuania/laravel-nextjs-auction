@@ -50,7 +50,9 @@ return [
     |
     */
 
-    'expiration' => null,
+    // Tokens expire after 7 days (matches the httpOnly auth cookie's max-age on
+    // the SPA). Limits how long a leaked token stays usable. Override via env.
+    'expiration' => (int) env('SANCTUM_EXPIRATION', 60 * 24 * 7),
 
     /*
     |--------------------------------------------------------------------------

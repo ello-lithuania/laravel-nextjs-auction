@@ -2,8 +2,6 @@
 
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
 
-const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://127.0.0.1:8000";
-
 type User = {
   id: number;
   name: string;
@@ -13,9 +11,11 @@ type User = {
 
 type AuthContextType = {
   user: User | null;
-  token: string | null;
   setUser: (user: User | null) => void;
-  login: (user: User, token: string) => void;
+  // The Sanctum token is no longer held in the browser — it lives in an
+  // httpOnly cookie managed by the Next.js BFF routes, so `login` only needs
+  // the (non-secret) user object.
+  login: (user: User) => void;
   logout: () => void;
 };
 
@@ -46,13 +46,8 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
     }
   });
 
-  const [token, setTokenState] = useState<string | null>(() => {
-    if (typeof window === "undefined") {
-      return null;
-    }
-    return window.localStorage.getItem("auctionhub_token");
-  });
-
+  // Only the non-sensitive user profile is persisted client-side, purely so the
+  // UI can render the logged-in state on reload. The auth token is never here.
   useEffect(() => {
     if (typeof window === "undefined") {
       return;
@@ -64,39 +59,21 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
     }
   }, [user]);
 
-  useEffect(() => {
-    if (typeof window === "undefined") {
-      return;
-    }
-    if (token) {
-      window.localStorage.setItem("auctionhub_token", token);
-    } else {
-      window.localStorage.removeItem("auctionhub_token");
-    }
-  }, [token]);
-
   const value = useMemo(
     () => ({
       user,
-      token,
       setUser: setUserState,
-      login: (nextUser: User, nextToken: string) => {
+      login: (nextUser: User) => {
         setUserState(nextUser);
-        setTokenState(nextToken);
       },
       logout: () => {
-        // Best-effort token revocation on the server; clear locally regardless.
-        if (token) {
-          fetch(`${apiBaseUrl}/api/logout`, {
-            method: "POST",
-            headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
-          }).catch(() => {});
-        }
+        // Clears the httpOnly cookie server-side (and revokes the token).
+        // Same-origin request, so the cookie is sent automatically.
+        fetch("/api/auth/logout", { method: "POST" }).catch(() => {});
         setUserState(null);
-        setTokenState(null);
       },
     }),
-    [user, token]
+    [user]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

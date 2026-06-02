@@ -7,15 +7,23 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Broadcast;
 use Illuminate\Support\Facades\Route;
 
-// Public
-Route::get('/auctions', [AuctionController::class, 'index']);
-Route::get('/auctions/{auction}/bids', [AuctionController::class, 'bids']);
-Route::get('/auctions/{auction}', [AuctionController::class, 'show']);
-Route::post('/register', [AuthController::class, 'register']);
-Route::post('/login', [AuthController::class, 'login']);
+// Public (read-only) endpoints — generous shared limit to absorb browsing.
+Route::middleware('throttle:public')->group(function () {
+    Route::get('/auctions', [AuctionController::class, 'index']);
+    Route::get('/auctions/{auction}/bids', [AuctionController::class, 'bids']);
+    Route::get('/auctions/{auction}', [AuctionController::class, 'show']);
+});
+
+// Auth endpoints — tight limit to slow brute-force / credential stuffing and
+// throttled by email+IP (see AppServiceProvider) so one attacker can't lock
+// out a victim by guessing their address.
+Route::middleware('throttle:auth')->group(function () {
+    Route::post('/register', [AuthController::class, 'register']);
+    Route::post('/login', [AuthController::class, 'login']);
+});
 
 // Authenticated (Sanctum token)
-Route::middleware('auth:sanctum')->group(function () {
+Route::middleware(['auth:sanctum', 'throttle:authenticated'])->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::post('/auctions/{auction}/bid', [AuctionController::class, 'bid']);
     Route::get('/user', fn (Request $request) => $request->user());

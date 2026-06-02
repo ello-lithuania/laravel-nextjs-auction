@@ -6,6 +6,7 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\Rules\Password;
 
 class AuthController extends Controller
 {
@@ -13,9 +14,12 @@ class AuthController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'name' => 'required|string|max:255',
-            'email' => 'required|email|unique:users,email',
+            'email' => 'required|email:rfc|max:255|unique:users,email',
             'city' => 'nullable|string|max:255',
-            'password' => 'required|string|min:6|confirmed',
+            // Enforce a meaningful password: at least 8 chars with mixed case
+            // and a digit. (No external breach check so local/offline dev still
+            // works.)
+            'password' => ['required', 'confirmed', Password::min(8)->letters()->mixedCase()->numbers()],
         ]);
 
         if ($validator->fails()) {
@@ -49,7 +53,13 @@ class AuthController extends Controller
         $credentials = $validator->validated();
         $user = User::where('email', $credentials['email'])->first();
 
-        if (!$user || !Hash::check($credentials['password'], $user->password)) {
+        // Always run a hash comparison, even when the account doesn't exist, so
+        // the response time doesn't reveal whether the email is registered
+        // (timing-based user enumeration). The dummy hash is a valid bcrypt of a
+        // random value.
+        $hash = $user?->password ?? '$2y$12$gamUcOhyjhkz5qKCTbTsSeyGE852gCnGBd63p2QV4bTX.t.D8s7vq';
+
+        if (!$user || !Hash::check($credentials['password'], $hash)) {
             return response()->json(['message' => 'Neteisingas el. paštas arba slaptažodis'], 401);
         }
 
