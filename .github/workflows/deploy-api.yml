@@ -49,5 +49,6 @@ jobs:
             composer install --no-dev --optimize-autoloader --no-interaction
             php artisan migrate --force
             php artisan config:cache
-            php artisan route:cache
+            # NOTE: no `route:cache` — routes/api.php uses closure routes
+            # (/user, /broadcasting/auth) which cannot be serialized/cached.
             php artisan storage:link || true

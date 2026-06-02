@@ -57,3 +57,7 @@ jobs:
           # --delete keeps public_html in sync with the build (removes stale
           # hashed assets). public_html must be dedicated to this frontend.
           ARGS: "-rltgoDzvO --delete"
+          # Protect the `backend` symlink (-> the Laravel API public dir) from
+          # being removed by --delete, since the API is served as a subpath of
+          # the same domain (https://<site>/backend) instead of a subdomain.
+          EXCLUDE: "backend"
