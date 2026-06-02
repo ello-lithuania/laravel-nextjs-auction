@@ -1,0 +1,191 @@
+export type DemoAuction = {
+  id: number;
+  slug: string;
+  endsAt: string;
+  title: string;
+  category: string;
+  location: string;
+  badge: string;
+  price: string;
+  subtitle: string;
+  description: string;
+  imageUrl: string;
+  gallery: string[];
+  starting_price: number;
+  current_price: number;
+  commission_percent: number;
+  status: string;
+  seller_name: string;
+  bids_count: number;
+};
+
+export const demoAuctions: DemoAuction[] = [
+  {
+    id: 1,
+    slug: "retro-laikrodis-1",
+    endsAt: "Birželio 15 d., 12:00",
+    title: "Retro laikrodis",
+    category: "Laikrodžiai",
+    location: "Vilnius",
+    badge: "Live",
+    price: "€3,450",
+    subtitle: "Klasikinis kolekcinis laikrodis",
+    description: "Klasikinis kolekcinis laikrodis su elegantiška aukso apdaila ir patikimu mechanizmu.",
+    imageUrl: "https://images.unsplash.com/photo-1512436991641-6745cdb1723f?auto=format&fit=crop&w=1200&q=80",
+    gallery: [
+      "https://images.unsplash.com/photo-1512436991641-6745cdb1723f?auto=format&fit=crop&w=1200&q=80",
+      "https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=1200&q=80",
+      "https://images.unsplash.com/photo-1508385082359-f8a2869641b5?auto=format&fit=crop&w=1200&q=80",
+    ],
+    starting_price: 2900,
+    current_price: 3450,
+    commission_percent: 5,
+    status: "Live",
+    seller_name: "Janina M.",
+    bids_count: 12,
+  },
+  {
+    id: 2,
+    slug: "modernus-sportinis-automobilis-2",
+    endsAt: "Birželio 17 d., 15:00",
+    title: "Modernus sportinis automobilis",
+    category: "Automobiliai",
+    location: "Kaunas",
+    badge: "Featured",
+    price: "€16,500",
+    subtitle: "Galingas variklis ir profesionali apdaila",
+    description: "Galingas sportinis automobilis su modernia salonu ir aukščiausios klasės komplektacija.",
+    imageUrl: "https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&w=1200&q=80",
+    gallery: [
+      "https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&w=1200&q=80",
+      "https://images.unsplash.com/photo-1495147466023-ac5c588e2e94?auto=format&fit=crop&w=1200&q=80",
+      "https://images.unsplash.com/photo-1525609004556-c46c7d6cf023?auto=format&fit=crop&w=1200&q=80",
+    ],
+    starting_price: 15000,
+    current_price: 16500,
+    commission_percent: 5,
+    status: "Featured",
+    seller_name: "Mantas V.",
+    bids_count: 8,
+  },
+  {
+    id: 3,
+    slug: "riboto-leidimo-tapyba-3",
+    endsAt: "Birželio 14 d., 18:00",
+    title: "Riboto leidimo tapyba",
+    category: "Menas",
+    location: "Klaipėda",
+    badge: "Verified",
+    price: "€5,980",
+    subtitle: "Unikalus kūrinys su aukšta investicine verte",
+    description: "Puikiai išsaugota tapyba, tinka tokiam kultūros pasirinkimui ar kolekcijai.",
+    imageUrl: "https://images.unsplash.com/photo-1517694712202-14dd9538aa97?auto=format&fit=crop&w=1200&q=80",
+    gallery: [
+      "https://images.unsplash.com/photo-1517694712202-14dd9538aa97?auto=format&fit=crop&w=1200&q=80",
+      "https://images.unsplash.com/photo-1481349518771-20055b2a7b24?auto=format&fit=crop&w=1200&q=80",
+      "https://images.unsplash.com/photo-1504196606672-aef5c9cefc92?auto=format&fit=crop&w=1200&q=80",
+    ],
+    starting_price: 5200,
+    current_price: 5980,
+    commission_percent: 5,
+    status: "Verified",
+    seller_name: "Aistė B.",
+    bids_count: 5,
+  },
+  {
+    id: 4,
+    slug: "profesionali-foto-iranga-4",
+    endsAt: "Birželio 20 d., 14:00",
+    title: "Profesionali foto įranga",
+    category: "Elektronika",
+    location: "Šiauliai",
+    badge: "For sale",
+    price: "€2,240",
+    subtitle: "Pilnas rinkinys komerciniam naudojimui",
+    description: "Aukštos kokybės foto įranga, puikiai veikianti studijai ir lauko darbams.",
+    imageUrl: "https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=1200&q=80",
+    gallery: [
+      "https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=1200&q=80",
+      "https://images.unsplash.com/photo-1517059224940-d4af9eec41e9?auto=format&fit=crop&w=1200&q=80",
+      "https://images.unsplash.com/photo-1498050108023-c5249e4df085?auto=format&fit=crop&w=1200&q=80",
+    ],
+    starting_price: 2000,
+    current_price: 2240,
+    commission_percent: 5,
+    status: "For sale",
+    seller_name: "Rasa K.",
+    bids_count: 3,
+  },
+  {
+    id: 5,
+    slug: "vilniaus-senamiescio-apartamentas-5",
+    endsAt: "Birželio 22 d., 11:00",
+    title: "Vilniaus senamiesčio apartamentas",
+    category: "Kolekcijos",
+    location: "Vilnius",
+    badge: "For sale",
+    price: "€3,850",
+    subtitle: "Ergonomiškas, įrengtas aukštos klasės interjeras",
+    description: "Modernus apartamentas su miesto centro patogumais ir elegantišku dizainu.",
+    imageUrl: "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?auto=format&fit=crop&w=1200&q=80",
+    gallery: [
+      "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?auto=format&fit=crop&w=1200&q=80",
+      "https://images.unsplash.com/photo-1526170375885-4d8ecf77b99f?auto=format&fit=crop&w=1200&q=80",
+      "https://images.unsplash.com/photo-1532012197267-da84d127e765?auto=format&fit=crop&w=1200&q=80",
+    ],
+    starting_price: 3600,
+    current_price: 3850,
+    commission_percent: 5,
+    status: "For sale",
+    seller_name: "Audrius Ž.",
+    bids_count: 6,
+  },
+  {
+    id: 6,
+    slug: "parduodamas-garazas-su-biuru-6",
+    endsAt: "Birželio 19 d., 09:00",
+    title: "Parduodamas garažas su biuru",
+    category: "Automobiliai",
+    location: "Kaunas",
+    badge: "Featured",
+    price: "€220,410",
+    subtitle: "Moderni erdvė logistikai ir verslui",
+    description: "Platus garažas su biuro patalpomis, paruoštas verslui arba investicijai.",
+    imageUrl: "https://images.unsplash.com/photo-1518546305926-6d92256ff59b?auto=format&fit=crop&w=1200&q=80",
+    gallery: [
+      "https://images.unsplash.com/photo-1518546305926-6d92256ff59b?auto=format&fit=crop&w=1200&q=80",
+      "https://images.unsplash.com/photo-1495147466023-ac5c588e2e94?auto=format&fit=crop&w=1200&q=80",
+      "https://images.unsplash.com/photo-1525609004556-c46c7d6cf023?auto=format&fit=crop&w=1200&q=80",
+    ],
+    starting_price: 200000,
+    current_price: 220410,
+    commission_percent: 5,
+    status: "Featured",
+    seller_name: "Dovydas P.",
+    bids_count: 4,
+  },
+  {
+    id: 7,
+    slug: "sodyba-prie-ezero-7",
+    endsAt: "Birželio 18 d., 10:00",
+    title: "Sodyba prie ežero",
+    category: "Kolekcijos",
+    location: "Klaipėda",
+    badge: "For rent",
+    price: "€162,000",
+    subtitle: "Ramioje vietoje su aukščiausios klasės apdaila",
+    description: "Erdvi sodyba su ežero vaizdu ir patogumais poilsiui ar šeimos atostogoms.",
+    imageUrl: "https://images.unsplash.com/photo-1508385082359-f8a2869641b5?auto=format&fit=crop&w=1200&q=80",
+    gallery: [
+      "https://images.unsplash.com/photo-1508385082359-f8a2869641b5?auto=format&fit=crop&w=1200&q=80",
+      "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?auto=format&fit=crop&w=1200&q=80",
+      "https://images.unsplash.com/photo-1504196606672-aef5c9cefc92?auto=format&fit=crop&w=1200&q=80",
+    ],
+    starting_price: 150000,
+    current_price: 162000,
+    commission_percent: 5,
+    status: "For rent",
+    seller_name: "Viktorija L.",
+    bids_count: 7,
+  },
+];
