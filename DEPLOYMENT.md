@@ -37,9 +37,9 @@ SSH duomenis (host, port, username) rasi hPanel → Advanced → SSH Access.
 
 | Variable | Pavyzdys |
 |---|---|
-| `NEXT_PUBLIC_API_URL` | `https://api.plum-mouse-764078.hostingersite.com` (kol nėra subdomeno — laikinas API adresas) |
+| `NEXT_PUBLIC_API_URL` | `https://dekaukciona.lt/backend` (API tame pačiame domene, `backend` symlink į Laravel `public`) |
 | `NEXT_PUBLIC_REVERB_APP_KEY` | `auction-key` |
-| `NEXT_PUBLIC_REVERB_HOST` | `api.plum-mouse-764078.hostingersite.com` |
+| `NEXT_PUBLIC_REVERB_HOST` | `dekaukciona.lt` |
 | `NEXT_PUBLIC_REVERB_PORT` | `443` |
 | `NEXT_PUBLIC_REVERB_SCHEME` | `https` |
 
@@ -62,7 +62,7 @@ cd ~/laravel-api
 cp .env.example .env          # arba įkelk paruoštą .env
 php artisan key:generate
 # Suredaguok .env: APP_ENV=production, APP_DEBUG=false, APP_URL=https://api...,
-#   FRONTEND_URL=https://plum-mouse-764078.hostingersite.com,
+#   FRONTEND_URL=https://dekaukciona.lt,
 #   DB_* (Hostinger MySQL), MAIL_*  ir kt.
 php artisan migrate --force
 php artisan storage:link
@@ -70,7 +70,7 @@ php artisan storage:link
 
 - **PHP versija:** hPanel → PHP Configuration → pasirink **8.2+** (Laravel 12).
 - **DB:** sukurk MySQL DB hPanel'yje ir įrašyk duomenis į `.env` (`DB_CONNECTION=mysql`).
-- **CORS:** `.env` `FRONTEND_URL` turi būti `https://plum-mouse-764078.hostingersite.com` (kad API priimtų užklausas iš front'o).
+- **CORS:** `.env` `FRONTEND_URL` turi būti `https://dekaukciona.lt`. (Front'as ir API yra tame pačiame origin'e, tad CORS net nesuveiks; bet `FRONTEND_URL` vis tiek naudojamas el. laiškų nuorodoms — pvz. slaptažodžio atstatymo — todėl turi būti teisingas.)
 
 ## 5. Saugumo pastabos (statinis variantas)
 
