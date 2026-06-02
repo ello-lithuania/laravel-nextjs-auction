@@ -39,9 +39,9 @@ jobs:
         working-directory: ./web
         env:
           NEXT_TELEMETRY_DISABLED: "1"
-          NEXT_PUBLIC_API_URL: ${{ vars.NEXT_PUBLIC_API_URL || 'https://plum-mouse-764078.hostingersite.com/backend' }}
+          NEXT_PUBLIC_API_URL: ${{ vars.NEXT_PUBLIC_API_URL || 'https://dekaukciona.lt/backend' }}
           NEXT_PUBLIC_REVERB_APP_KEY: ${{ vars.NEXT_PUBLIC_REVERB_APP_KEY || 'auction-key' }}
-          NEXT_PUBLIC_REVERB_HOST: ${{ vars.NEXT_PUBLIC_REVERB_HOST || 'plum-mouse-764078.hostingersite.com' }}
+          NEXT_PUBLIC_REVERB_HOST: ${{ vars.NEXT_PUBLIC_REVERB_HOST || 'dekaukciona.lt' }}
           NEXT_PUBLIC_REVERB_PORT: ${{ vars.NEXT_PUBLIC_REVERB_PORT || '443' }}
           NEXT_PUBLIC_REVERB_SCHEME: ${{ vars.NEXT_PUBLIC_REVERB_SCHEME || 'https' }}
         run: |

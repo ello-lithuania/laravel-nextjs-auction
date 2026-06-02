@@ -12,15 +12,20 @@ set -euo pipefail
 
 # ============================ CONFIG ============================
 # Change these if the domain / hosting account / paths change.
+# DOMAIN is the only thing that changes when the site's domain changes; the
+# server folder lives under ~/domains/<DOMAIN>/ on Hostinger. If your folder
+# under ~/domains/ is still named after the old (plum-mouse) address, set
+# API_DIR/WEB_DIR explicitly instead of deriving them from $DOMAIN.
+DOMAIN=dekaukciona.lt
 SSH_HOST=46.202.142.44
 SSH_PORT=65002
 SSH_USER=u984572075
 SSH_KEY="$HOME/.ssh/hostinger_deploy"
-API_DIR=/home/u984572075/domains/plum-mouse-764078.hostingersite.com/laravel-api
-WEB_DIR=/home/u984572075/domains/plum-mouse-764078.hostingersite.com/public_html
-API_URL=https://plum-mouse-764078.hostingersite.com/backend
-SITE_URL=https://plum-mouse-764078.hostingersite.com
-REVERB_HOST=plum-mouse-764078.hostingersite.com
+API_DIR=/home/u984572075/domains/$DOMAIN/laravel-api
+WEB_DIR=/home/u984572075/domains/$DOMAIN/public_html
+API_URL=https://$DOMAIN/backend
+SITE_URL=https://$DOMAIN
+REVERB_HOST=$DOMAIN
 # ===============================================================
 
 cd "$(dirname "$0")"
