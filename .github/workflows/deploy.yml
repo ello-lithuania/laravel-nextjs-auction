@@ -1,0 +1,90 @@
+name: Deploy
+
+# Deploys over FTPS from a GitHub-hosted runner. (Hostinger blocks SSH from
+# GitHub's cloud IPs, but FTPS works.) Two jobs run in parallel:
+#   - frontend: build the Next.js static export -> public_html
+#   - api:      upload the Laravel code -> ~/laravel-api
+#
+# Required secrets: FTP_SERVER, FTP_USERNAME, FTP_PASSWORD
+# (Hostinger hPanel -> Files -> FTP Accounts.)
+#
+# NOT handled here (rare, run `bash deploy.sh api` from your PC when needed):
+#   - composer install (only when you add/upgrade PHP packages)
+#   - php artisan migrate (only when you add DB migrations)
+# The server keeps its own .env, vendor/, storage/ and database — those are
+# excluded below so a deploy never touches them.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  deploy-frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install dependencies
+        working-directory: ./web
+        run: npm ci
+
+      - name: Build static export
+        working-directory: ./web
+        env:
+          NEXT_TELEMETRY_DISABLED: "1"
+          NEXT_PUBLIC_API_URL: ${{ vars.NEXT_PUBLIC_API_URL || 'https://plum-mouse-764078.hostingersite.com/backend' }}
+          NEXT_PUBLIC_REVERB_APP_KEY: ${{ vars.NEXT_PUBLIC_REVERB_APP_KEY || 'auction-key' }}
+          NEXT_PUBLIC_REVERB_HOST: ${{ vars.NEXT_PUBLIC_REVERB_HOST || 'plum-mouse-764078.hostingersite.com' }}
+          NEXT_PUBLIC_REVERB_PORT: ${{ vars.NEXT_PUBLIC_REVERB_PORT || '443' }}
+          NEXT_PUBLIC_REVERB_SCHEME: ${{ vars.NEXT_PUBLIC_REVERB_SCHEME || 'https' }}
+        run: |
+          npm run build
+          cp deploy/public_html.htaccess out/.htaccess
+
+      - name: Deploy frontend (FTPS)
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.FTP_SERVER }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          local-dir: ./web/out/
+          server-dir: /public_html/
+          protocol: ftps
+          port: 21
+          timeout: 60000
+
+  deploy-api:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Deploy API (FTPS)
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.FTP_SERVER }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          local-dir: ./api/
+          server-dir: /laravel-api/
+          protocol: ftps
+          port: 21
+          timeout: 120000
+          # Server-managed things are never overwritten/removed:
+          exclude: |
+            **/.git*
+            **/.git*/**
+            **/node_modules/**
+            **/vendor/**
+            .env
+            .env.example
+            **/storage/**
+            database/database.sqlite
+            tests/**
+            bootstrap/cache/**
