@@ -74,8 +74,10 @@ EOF
     NEXT_TELEMETRY_DISABLED=1 npm run build
     cp deploy/public_html.htaccess out/.htaccess
     rm -f .env.production.local
-    # Upload the built site. The `backend` symlink (API) is left untouched.
-    tar czf - -C out . | $SSH "tar xzf - -C '$WEB_DIR'"
+    # Upload the built site. First delete the old hashed assets so stale tabs
+    # can't load a previous build's JS (old chunk -> 404 -> Next reloads to the
+    # fresh build). The `backend` symlink (API) and .htaccess are left untouched.
+    tar czf - -C out . | $SSH "rm -rf '$WEB_DIR/_next' && tar xzf - -C '$WEB_DIR'"
   )
   echo "    WEB done."
 }
