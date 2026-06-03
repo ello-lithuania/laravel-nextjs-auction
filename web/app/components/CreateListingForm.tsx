@@ -130,7 +130,7 @@ export default function CreateListingForm() {
           </select>
         </div>
         <div>
-          <label className={labelClass}>Pakategorė</label>
+          <label className={labelClass}>Subkategorija</label>
           <select
             value={subcategory}
             onChange={(e) => setSubcategory(e.target.value)}

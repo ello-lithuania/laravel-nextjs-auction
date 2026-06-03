@@ -5,8 +5,8 @@ import { motion, AnimatePresence } from "motion/react";
 import { categories } from "../data/categories";
 
 // Kategorijų naršyklė su parent → child struktūra. Paspaudus pagrindinę
-// kategoriją, atsiveria jos pakategorės. Pasirinkus pakategorę — filtruojamas
-// aukcionų sąrašas (per onPick).
+// kategoriją, atsiveria jos subkategorijos. Pasirinkus subkategoriją —
+// filtruojamas aukcionų sąrašas (per onPick).
 export default function CategoryBrowser({
   onPick,
 }: {
@@ -35,7 +35,7 @@ export default function CategoryBrowser({
                   {c.label}
                 </span>
                 <span className={`text-xs font-semibold ${isActive ? "text-cream/70" : "text-muted"}`}>
-                  {c.children.length} pakategorės
+                  {c.children.length} subkategorijos
                 </span>
               </span>
             </button>

@@ -430,7 +430,7 @@ export default function Home() {
             Naršyk pagal kategorijas
           </h2>
           <p className="mt-1.5 text-muted">
-            Pasirink kategoriją ir pamatyk pakategores — nuo transporto iki kolekcijų.
+            Pasirink kategoriją ir pamatyk subkategorijas — nuo transporto iki kolekcijų.
           </p>
         </Reveal>
         <div className="mt-6">
