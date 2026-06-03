@@ -1,7 +1,9 @@
 "use client"
 
 import { useState } from "react";
+import Link from "next/link";
 import { useToast } from "../components/ToastProvider";
+import AuthShell, { inputClass, labelClass, primaryBtnClass } from "../components/AuthShell";
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
@@ -39,42 +41,38 @@ export default function ForgotPasswordPage() {
   };
 
   return (
-    <div className="mx-auto max-w-md p-8">
-      <h1 className="mb-4 text-2xl font-semibold text-slate-900">Pamiršote slaptažodį?</h1>
+    <AuthShell
+      title="Pamiršai slaptažodį?"
+      subtitle="Įvesk el. paštą ir atsiųsime nuorodą jam atstatyti."
+    >
       {sent ? (
-        <div className="space-y-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-          <p className="text-sm text-slate-700">
-            Jei tokia paskyra egzistuoja, į nurodytą el. paštą išsiuntėme slaptažodžio atstatymo nuorodą.
-            Patikrinkite savo pašto dėžutę.
-          </p>
-          <a href="/login" className="text-sm text-slate-600 hover:underline">Grįžti į prisijungimą</a>
+        <div className="space-y-4">
+          <div className="rounded-md border-2 border-ink bg-green/15 px-4 py-3 text-sm font-semibold">
+            ✅ Jei tokia paskyra egzistuoja, į nurodytą el. paštą išsiuntėme atstatymo nuorodą. Patikrink pašto dėžutę.
+          </div>
+          <Link href="/login" className="block text-center text-sm font-semibold text-green-deep hover:underline">
+            ← Grįžti į prisijungimą
+          </Link>
         </div>
       ) : (
-        <form onSubmit={submit} className="space-y-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-          <p className="text-sm text-slate-600">
-            Įveskite paskyros el. paštą ir atsiųsime nuorodą slaptažodžiui atstatyti.
-          </p>
-          <label className="block text-sm text-slate-700">
-            El. paštas
+        <form onSubmit={submit} className="space-y-4">
+          <div>
+            <label className={labelClass}>El. paštas</label>
             <input
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 outline-none focus:ring-2 focus:ring-sky-300"
+              className={`mt-1.5 ${inputClass}`}
             />
-          </label>
-          <div className="flex items-center justify-between">
-            <button
-              type="submit"
-              disabled={loading}
-              className="inline-flex items-center justify-center rounded-full bg-slate-950 px-5 py-2 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:opacity-60"
-            >
-              {loading ? "Siunčiama..." : "Siųsti nuorodą"}
-            </button>
-            <a href="/login" className="text-sm text-slate-600 hover:underline">Atgal į prisijungimą</a>
           </div>
+          <button type="submit" disabled={loading} className={primaryBtnClass}>
+            {loading ? "Siunčiama…" : "Siųsti nuorodą"}
+          </button>
+          <Link href="/login" className="block text-center text-sm font-semibold text-muted hover:text-ink">
+            ← Atgal į prisijungimą
+          </Link>
         </form>
       )}
-    </div>
+    </AuthShell>
   );
 }

@@ -47,6 +47,18 @@ return [
             'report' => false,
         ],
 
+        // Naudotojų įkeltos nuotraukos. Rašom TIESIAI į public/uploads, kad
+        // veiktų ir ten, kur symlink (storage:link) išjungtas (Hostinger shared).
+        // Serviuojama per <APP_URL>/uploads (prod: https://dekaukciona.lt/backend/uploads).
+        'uploads' => [
+            'driver' => 'local',
+            'root' => public_path('uploads'),
+            'url' => rtrim(env('APP_URL', 'http://localhost'), '/').'/uploads',
+            'visibility' => 'public',
+            'throw' => false,
+            'report' => false,
+        ],
+
         's3' => [
             'driver' => 's3',
             'key' => env('AWS_ACCESS_KEY_ID'),

@@ -19,6 +19,7 @@ class Auction extends Model
         'slug',
         'description',
         'category',
+        'subcategory',
         'location',
         'seller_name',
         'seller_id',

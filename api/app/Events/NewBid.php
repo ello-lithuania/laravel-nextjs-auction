@@ -21,17 +21,22 @@ class NewBid implements ShouldBroadcastNow
      */
     public array $bid;
 
+    public ?string $endsAt;
+    public bool $extended;
+
     /**
      * Create a new event instance.
      *
      * @param array<string, mixed> $bid
      */
-    public function __construct(int $auctionId, float $currentPrice, int $bidsCount, array $bid)
+    public function __construct(int $auctionId, float $currentPrice, int $bidsCount, array $bid, ?string $endsAt = null, bool $extended = false)
     {
         $this->auctionId = $auctionId;
         $this->currentPrice = $currentPrice;
         $this->bidsCount = $bidsCount;
         $this->bid = $bid;
+        $this->endsAt = $endsAt;
+        $this->extended = $extended;
     }
 
     /**
@@ -66,6 +71,8 @@ class NewBid implements ShouldBroadcastNow
             'currentPrice' => $this->currentPrice,
             'bidsCount' => $this->bidsCount,
             'bid' => $this->bid,
+            'endsAt' => $this->endsAt,
+            'extended' => $this->extended,
         ];
     }
 }

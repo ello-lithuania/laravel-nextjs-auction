@@ -1,56 +1,80 @@
-# Aukcionų platformos dizaino brandbook
+# Dekaukciona — brandbook
 
-## 1. Koncepcija
+> Kryptis: **„Chunky / žaismingas"**. Ne rimta aukciono namų prabanga, ne pigus
+> „1 € azartas" — o **žaidimas, kuriame laimi tikrus daiktus**.
 
-- **Tikslas:** sukurti profesionalią ir modernią aukcionų platformos pradžios puslapio identitetą.
-- **Tonas:** rimtas, patikimas, aštrus ir elegantiškas.
-- **Vartotojas:** pardavėjai, kurie nori greitai paleisti aukcionus, ir pirkėjai, kurie nori patikimos, aiškios aukciono patirties.
+## 1. Pozicionavimas
 
-## 2. Spalvų paletė
+Skelbiu.lt principas (nemokami skelbimai, bendruomenė), bet pardavimas vyksta
+**aukciono principu** ir patirtis sukurta būti **smagi**. Statyk realiu laiku,
+jausk azartą, laimėk. Mokėjimai per platformą kol kas nevykdomi — laimėjęs
+tariasi su pardavėju.
 
-- **Tamsus fonas:** `#020617`
-- **Balta / šviesus tekstas:** `#f8fafc`
-- **Mėlyna akcentinė:** `#60a5fa`
-- **Gilesnė mėlyna:** `#2563eb`
-- **Auksinė akcentinė:** `#fbbf24`
-- **Neutraliai pilka:** `#94a3b8`
+**Vienas sakinys:** *Dekaukciona — vieta, kur pirkimas virsta žaidimu.*
 
-## 3. Tipografija
+### Trys ramsčiai
+1. **Azartas** — gyvas countdown, kylančios kainos, „tave aplenkė", anti-snipe pratęsimas.
+2. **Žaismė** — sodrios spalvos, chunky forma, „juicy" animacijos, garsas.
+3. **Bendruomenė** — nemokama, dalijamasi, draugiškas „tu" tonas.
 
-- **Pagrindinis šriftas:** Geist / system font.
-- **Antraštės:** didelis kontrastas, švarios linijos, pakeltas tarpas tarp raidžių.
-- **Tekstas:** aiškus, geras skaitomumas ir šiek tiek prislopintas šviesumas antraštėms.
+## 2. Balsas ir tonas
 
-## 4. Layout ir struktūra
+Draugiškas, energingas, „tu" forma. Trumpi, drąsūs sakiniai. Be korporatyvinio
+žargono („komisinis procentas", „pardavėjo matomumas" — NE).
 
-- Hero sekcija su aiškiu pasiūlymu ir pagrindiniu pasiūlymo teiginiu.
-- Informaciniai kortelės su svarbiausiais privalumais: komisija, greitas paleidimas, pardavimo peržiūra.
-- Dokumentuotos kategorijos ir pardavėjo rekomendacijos.
-- CTA blokas su aiškiais veiksmais.
+| Kontekstas | ✅ Taip | ❌ Ne |
+|---|---|---|
+| CTA mygtukas | „STATYTI", „Paskelbti nemokamai" | „Pateikti pasiūlymą", „Sukurti skelbimą" |
+| Laimėjimas | „🏆 TU LAIMĖJAI!" | „Jūsų pasiūlymas priimtas" |
+| Aplenkė | „Tave aplenkė! Statyk dar 💪" | „Jūsų pasiūlymas nebėra didžiausias" |
+| Skuba | „Liko 45 s — paskubėk!" | „Aukcionas netrukus baigsis" |
+| Tuščia | „Nieko neradom 🙈" | „Rezultatų nerasta" |
 
-## 5. UI kryptys
+## 3. Spalvos (su vaidmenimis)
 
-- Naudoti išraiškingas korteles su minkštais kontūrais ir nepermatomomis fono plokštėmis.
-- Vizualiai atskirti informaciją su pakopomis: hero, kortelės, privalumai, CTA.
-- Pabrėžti patikimumą per švarias linijas ir tvarkingą tipografiją.
-- Vengti per daug „AI“ stiliaus dekoracijų – nebent subtilus gradientas ir preciziškai apdirbti UI elementai.
+Spalva = reikšmė, ne dekoracija. Visos gyvena `globals.css` `@theme`.
 
-## 6. UI komponentai
+| Žetonas | Hex | Vaidmuo |
+|---|---|---|
+| `cream` | `#FBF5EA` | Puslapio fonas (NIEKADA balta visur). |
+| `paper` | `#FFFFFF` | Kortelės. |
+| `sand` | `#F2E9D8` | Alt paviršius, hover, media fonas. |
+| `ink` | `#171615` | Rėmeliai, šešėliai, pagrindinis tekstas. |
+| `muted` | `#6B6862` | Antrinis tekstas. |
+| `green` | `#15C46A` | Veiksmas, statyti, laimėjimas. |
+| `green-deep` | `#0E9B53` | Žalia tekstui ant šviesaus. |
+| `red` | `#FF4A2E` | Skuba, countdown, „aplenkė". |
+| `gold` | `#FFC53D` | Vertė, „rekomenduojama", šventė, CTA akcentas. |
 
-- **Mygtukai:** dideli, apvalūs, ryškus pagrindinis mygtukas su kontrastingu hover efektu.
-- **Kortelės:** atviros ribos, tamsesnė fono spalva, minkštas šešėlis.
-- **Žymos ir etiketės:** didesnis tarpas tarp raidžių, kad būtų patikimo tarpo jausmas.
+**Draudžiama:** sky-blue, violetiniai-mėlyni gradientai, pilka ant pilkos,
+blur-gradientai ant kortelių.
 
-## 7. Rekomenduojama ėja į front page
+## 4. Tipografija
 
-1. Hero sekcija su pagrindiniu teiginiu ir trumputėmis kortelėmis.
-2. Aktyvių skelbimų peržiūra su aiškiomis kainomis ir laiku.
-3. Pardavėjo privalumų ir kategorijų skyrius.
-4. Paskutinis CTA skyrius, kviečiantis pradėti skelbimą arba peržiūrėt aukcionus.
+- **Display** (`--font-display`): **Bricolage Grotesque** — antraštės, kaina,
+  badge, mygtukai. Bold/extrabold, `tracking-tight`.
+- **UI** (`--font-ui`): **Hanken Grotesk** — pastraipos, etiketės, smulkmenos.
+- Abu su `latin-ext` (ąčęėįšųūž). Šriftą keisti — tik `layout.tsx`.
 
-## 8. Stilistinės gairės
+Skalė (display): hero 44–60px / sekcijų antraštės 30–40px / kaina kortelėj 26px /
+kaina hero 34px. UI tekstas 14–18px.
 
-- Venkite painių tekstų ir per daug animacijų.
-- Laikykitės vientiso tonuso visose antraštėse.
-- Naudokite profesionalų žodyną: „komisinis procentas“, „pardavėjo matomumas“, „saugi aukciono patirtis".
-- Šviesus ir kontrastingas turinys ant tamsaus fono suteikia brangų ir modernų įspūdį.
+## 5. Forma ir „chunky"
+
+- **Rėmelis:** 2–3px `ink`, NIEKADA pilkas/permatomas.
+- **Šešėlis:** kietas offset `shadow-chunky` (`5px 5px 0 ink`), NIEKADA blur.
+- **Radius:** `rounded-chunk` (~8px). Švelniai apvalu — ne pill, ne soft-2xl.
+- **Hover:** pakyla į šešėlį (`x/y -3`, šešėlis didėja). **Active:** krenta (squash).
+- Mygtukai/badge/inputai — visi tos pačios chunky logikos.
+
+## 6. Imagery
+
+- Tikros, kontrastingos daiktų nuotraukos `aspect-[4/3]`, `object-cover`, ink rėmelis.
+- Be stock-iliustracijų, be 3D-blob'ų, be AI-gradientinių fonų.
+- Fonas gali turėti subtilų **taškelių tinklelį** (hero) — bet ne gradientą.
+
+## 7. Motion principai
+
+Žr. detaliai [docs/design-system.md](./docs/design-system.md). Trumpai: judesys
+turi tikslą (azartas / grįžtamasis ryšys), greitas (150–260ms), „spyruoklinis",
+visada su `prefers-reduced-motion` atsargine versija.

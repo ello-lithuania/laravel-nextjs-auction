@@ -36,16 +36,27 @@ deploy_api() {
   tar czf - -C api \
     --exclude='./vendor' --exclude='./node_modules' --exclude='./.env' \
     --exclude='./.git' --exclude='./storage/logs' \
-    --exclude='./database/database.sqlite' --exclude='./bootstrap/cache' . \
+    --exclude='./database/database.sqlite' --exclude='./bootstrap/cache' \
+    --exclude='./public/uploads' . \
   | $SSH "mkdir -p '$API_DIR' && tar xzf - -C '$API_DIR' \
       && ln -sfn '$API_DIR/public' '$WEB_DIR/backend' \
       && cd '$API_DIR' \
       && composer install --no-dev --optimize-autoloader --no-interaction \
       && php artisan migrate --force \
+      && php artisan db:seed --class=PostSeeder --force \
       && php artisan config:cache"
-  # Note: no `php artisan storage:link` — Hostinger disables PHP exec(), and
-  # this app references images by external URL, so public/storage isn't needed.
+  # Naudotojų įkeltos nuotraukos rašomos į public/uploads (be storage:link) ir
+  # serviuojamos per /backend/uploads — tinka Hostinger, kur symlink ribotas.
   echo "    API done."
+}
+
+deploy_migrate() {
+  echo "==> Running migrations + content seed on server ..."
+  $SSH "cd '$API_DIR' \
+      && php artisan migrate --force \
+      && php artisan db:seed --class=PostSeeder --force \
+      && php artisan config:cache"
+  echo "    migrate done."
 }
 
 deploy_web() {
@@ -72,8 +83,9 @@ EOF
 case "${1:-all}" in
   api) deploy_api ;;
   web) deploy_web ;;
+  migrate) deploy_migrate ;;
   all) deploy_api; deploy_web ;;
-  *) echo "Usage: bash deploy.sh [all|api|web]"; exit 1 ;;
+  *) echo "Usage: bash deploy.sh [all|api|web|migrate]"; exit 1 ;;
 esac
 
 echo ""

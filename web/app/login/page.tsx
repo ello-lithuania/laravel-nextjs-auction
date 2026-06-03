@@ -1,9 +1,11 @@
 "use client"
 
 import { useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useToast } from "../components/ToastProvider";
 import { useAuth } from "../components/AuthProvider";
+import AuthShell, { inputClass, labelClass, primaryBtnClass } from "../components/AuthShell";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -83,40 +85,43 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="mx-auto max-w-md p-8">
-      <h1 className="mb-4 text-2xl font-semibold text-slate-900">Prisijungimas</h1>
-      <form onSubmit={submit} className="space-y-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-        {error ? <div className="rounded border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</div> : null}
-        <label className="block text-sm text-slate-700">
-          El. paštas
+    <AuthShell title="Prisijunk" subtitle="Sveikas sugrįžęs! Statyk ir laimėk toliau.">
+      <form onSubmit={submit} className="space-y-4">
+        {error ? (
+          <div className="rounded-md border-2 border-ink bg-red px-3 py-2 text-sm font-semibold text-white">
+            {error}
+          </div>
+        ) : null}
+        <div>
+          <label className={labelClass}>El. paštas</label>
           <input
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 outline-none focus:ring-2 focus:ring-sky-300"
+            className={`mt-1.5 ${inputClass}`}
           />
-        </label>
-        <label className="block text-sm text-slate-700">
-          Slaptažodis
+        </div>
+        <div>
+          <label className={labelClass}>Slaptažodis</label>
           <input
             type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 outline-none focus:ring-2 focus:ring-sky-300"
+            className={`mt-1.5 ${inputClass}`}
           />
-        </label>
-        <div className="flex items-center justify-between">
-          <button
-            type="submit"
-            disabled={loading}
-            className="inline-flex items-center justify-center rounded-full bg-slate-950 px-5 py-2 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:opacity-60"
-          >
-            {loading ? "Kraunasi..." : "Prisijungti"}
-          </button>
-          <a href="/register" className="text-sm text-slate-600 hover:underline">Neturite paskyros? Registracija</a>
         </div>
-        <a href="/forgot-password" className="block text-sm text-slate-500 hover:underline">Pamiršote slaptažodį?</a>
+        <button type="submit" disabled={loading} className={primaryBtnClass}>
+          {loading ? "Jungiamasi…" : "Prisijungti 🚀"}
+        </button>
+        <div className="flex items-center justify-between pt-1 text-sm">
+          <Link href="/forgot-password" className="font-semibold text-muted hover:text-ink">
+            Pamiršai slaptažodį?
+          </Link>
+          <Link href="/register" className="font-semibold text-green-deep hover:underline">
+            Neturi paskyros? Registruokis
+          </Link>
+        </div>
       </form>
-    </div>
+    </AuthShell>
   );
 }

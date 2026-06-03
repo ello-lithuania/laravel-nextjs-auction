@@ -131,4 +131,30 @@ class AuthController extends Controller
 
         return response()->json(['message' => 'Slaptažodis sėkmingai pakeistas.'], 200);
     }
+
+    /**
+     * Save the authenticated user's billing requisites (person or company).
+     * POST /api/user/requisites
+     */
+    public function updateRequisites(Request $request)
+    {
+        $user = $request->user();
+
+        $validated = $request->validate([
+            'billing_type' => 'required|in:person,company',
+            'billing_name' => 'required|string|max:255',
+            'billing_code' => 'nullable|string|max:50',
+            'billing_vat' => 'nullable|string|max:50',
+            'billing_address' => 'nullable|string|max:255',
+            'billing_phone' => 'nullable|string|max:50',
+            'billing_iban' => 'nullable|string|max:64',
+        ]);
+
+        $user->forceFill($validated)->save();
+
+        return response()->json([
+            'message' => 'Rekvizitai išsaugoti.',
+            'user' => $user,
+        ], 200);
+    }
 }

@@ -1,24 +1,50 @@
 @import "tailwindcss";
 
-:root {
-  --background: #f8fafb;
-  --foreground: #0f172a;
-  --surface: #ffffff;
-  --surface-alt: #f1f5f9;
-  --border: #e2e8f0;
-  --muted: #64748b;
-  --primary: #f97316;
-  --primary-soft: #fee2ce;
-  --secondary: #0f172a;
-  --font-geist-sans: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-  --font-geist-mono: ui-monospace, "Cascadia Code", "Source Code Pro", Menlo, Consolas, monospace;
+/*
+  Dekaukciona — "Chunky / žaismingas" dizaino sistema.
+  Kryptis: kreminis fonas, juodi rėmeliai, kieti offset šešėliai,
+  sodrios plokščios spalvos. Jokio soft-AI: jokių blur-gradientų ant kortelių,
+  jokios sky-blue, jokio pilko ant pilko.
+
+  ŠRIFTĄ keisti vienoje vietoje: --font-display žemiau (+ importas layout.tsx).
+*/
+
+@theme {
+  /* Paviršiai */
+  --color-cream: #fbf5ea; /* puslapio fonas */
+  --color-paper: #ffffff; /* kortelės */
+  --color-sand: #f2e9d8; /* alt paviršius / hover */
+
+  /* Tušas — rėmeliai, šešėliai, pagrindinis tekstas */
+  --color-ink: #171615;
+  --color-muted: #6b6862; /* antrinis tekstas */
+  --color-line: #171615; /* rėmelių spalva visada ink */
+
+  /* Semantinės akcentinės (turi reikšmę, ne dekoracija) */
+  --color-green: #15c46a; /* veiksmas / statyti / laimėjimas */
+  --color-green-deep: #0e9b53; /* žalia ant šviesaus, tekstui */
+  --color-red: #ff4a2e; /* skuba / countdown / aplenkė */
+  --color-gold: #ffc53d; /* vertė / rekomenduojama / šventė */
+
+  /* Tipografija */
+  --font-display: var(--font-bricolage), "Hanken Grotesk", system-ui, sans-serif;
+  --font-ui: var(--font-hanken), system-ui, sans-serif;
+
+  /* Kieti offset šešėliai — sistemos parašas */
+  --shadow-chunky-sm: 3px 3px 0 var(--color-ink);
+  --shadow-chunky: 5px 5px 0 var(--color-ink);
+  --shadow-chunky-lg: 8px 8px 0 var(--color-ink);
+
+  /* Radius — švelniai apvalu, ne pill, ne soft-2xl */
+  --radius-chunk: 0.5rem;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+:root {
+  color-scheme: light;
+}
+
+* {
+  box-sizing: border-box;
 }
 
 html {
@@ -26,23 +52,151 @@ html {
 }
 
 body {
-  min-height: 100vh;
   margin: 0;
-  background: var(--background);
-  color: var(--foreground);
-  font-family: var(--font-sans), Inter, system-ui, sans-serif;
-}
-
-* {
-  box-sizing: border-box;
-}
-
-button,
-a {
-  transition: all 0.2s ease;
+  min-height: 100vh;
+  background: var(--color-cream);
+  color: var(--color-ink);
+  font-family: var(--font-ui);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
 }
 
 ::selection {
-  background: rgba(249, 115, 22, 0.2);
-  color: var(--foreground);
+  background: var(--color-gold);
+  color: var(--color-ink);
+}
+
+/* --------------------------------------------------------------------------
+   .chunky — pagrindinis blokas: storas juodas rėmelis + kietas offset šešėlis.
+   Naudoti VISUR vietoj soft border+shadow. Variantai: -sm, -lg.
+   -------------------------------------------------------------------------- */
+.chunky {
+  border: 2.5px solid var(--color-ink);
+  box-shadow: var(--shadow-chunky);
+  background: var(--color-paper);
+}
+.chunky-sm {
+  border: 2px solid var(--color-ink);
+  box-shadow: var(--shadow-chunky-sm);
+  background: var(--color-paper);
+}
+.chunky-lg {
+  border: 3px solid var(--color-ink);
+  box-shadow: var(--shadow-chunky-lg);
+  background: var(--color-paper);
+}
+
+/* .press — „čiumpamas" mygtukas:
+   hover → pakyla į didesnį šešėlį; active → nukrenta (squash). */
+.press {
+  transition:
+    transform 0.12s ease,
+    box-shadow 0.12s ease,
+    filter 0.12s ease;
+}
+.press:hover {
+  transform: translate(-2px, -2px);
+  box-shadow: 6px 6px 0 var(--color-ink);
+  filter: saturate(1.08);
+}
+.press:active {
+  transform: translate(1px, 1px);
+  box-shadow: 2px 2px 0 var(--color-ink);
+  filter: none;
+}
+
+/* --------------------------------------------------------------------------
+   Animacijos (CSS dalis; sudėtingesnės — per Framer Motion komponentuose).
+   -------------------------------------------------------------------------- */
+@keyframes pulse-urgent {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.07);
+  }
+}
+.animate-urgent {
+  animation: pulse-urgent 0.9s ease-in-out infinite;
+}
+
+@keyframes marquee {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+.animate-marquee {
+  animation: marquee 32s linear infinite;
+}
+
+/* --------------------------------------------------------------------------
+   .article-body — naujienų straipsnio tekstas (Markdown → HTML).
+   -------------------------------------------------------------------------- */
+.article-body {
+  font-size: 17px;
+  line-height: 1.75;
+  color: var(--color-ink);
+}
+.article-body h2 {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 1.6rem;
+  letter-spacing: -0.02em;
+  margin: 2.2rem 0 0.8rem;
+}
+.article-body h3 {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1.25rem;
+  margin: 1.6rem 0 0.6rem;
+}
+.article-body p {
+  margin: 0 0 1.1rem;
+}
+.article-body ul,
+.article-body ol {
+  margin: 0 0 1.2rem;
+  padding-left: 1.4rem;
+}
+.article-body li {
+  margin: 0.35rem 0;
+}
+.article-body ul li::marker {
+  color: var(--color-green-deep);
+}
+.article-body ol li::marker {
+  font-family: var(--font-display);
+  font-weight: 700;
+  color: var(--color-green-deep);
+}
+.article-body strong {
+  font-weight: 700;
+}
+.article-body a {
+  color: var(--color-green-deep);
+  text-decoration: underline;
+  font-weight: 600;
+}
+.article-body blockquote {
+  border-left: 4px solid var(--color-ink);
+  margin: 1.4rem 0;
+  padding: 0.2rem 0 0.2rem 1rem;
+  font-style: italic;
+  color: var(--color-muted);
+}
+
+/* Pagarba „mažiau judesio" nustatymui. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

@@ -92,6 +92,7 @@ jobs:
             .env
             .env.example
             **/storage/**
+            public/uploads/**
             database/database.sqlite
             tests/**
             bootstrap/cache/**

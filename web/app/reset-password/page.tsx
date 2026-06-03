@@ -1,13 +1,15 @@
 "use client"
 
 import { Suspense, useState } from "react";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useToast } from "../components/ToastProvider";
+import AuthShell, { inputClass, labelClass, primaryBtnClass } from "../components/AuthShell";
 
 // useSearchParams must live under a Suspense boundary (Next.js requirement).
 export default function ResetPasswordPage() {
   return (
-    <Suspense fallback={<div className="mx-auto max-w-md p-8 text-sm text-slate-500">Kraunasi…</div>}>
+    <Suspense fallback={<div className="p-8 text-center text-sm text-muted">Kraunasi…</div>}>
       <ResetPasswordForm />
     </Suspense>
   );
@@ -63,46 +65,44 @@ function ResetPasswordForm() {
   };
 
   return (
-    <div className="mx-auto max-w-md p-8">
-      <h1 className="mb-4 text-2xl font-semibold text-slate-900">Naujas slaptažodis</h1>
+    <AuthShell title="Naujas slaptažodis" subtitle={missingLink ? undefined : `Paskyrai ${email}`}>
       {missingLink ? (
-        <div className="space-y-4 rounded-2xl border border-amber-200 bg-amber-50 p-6 text-sm text-amber-800">
-          <p>Atstatymo nuoroda neteisinga arba nepilna. Atidarykite ją tiesiai iš gauto el. laiško.</p>
-          <a href="/forgot-password" className="text-amber-900 underline">Prašyti naujos nuorodos</a>
+        <div className="space-y-4">
+          <div className="rounded-md border-2 border-ink bg-gold px-4 py-3 text-sm font-semibold">
+            ⚠️ Atstatymo nuoroda neteisinga arba nepilna. Atidaryk ją tiesiai iš gauto el. laiško.
+          </div>
+          <Link href="/forgot-password" className="block text-center text-sm font-semibold text-green-deep hover:underline">
+            Prašyti naujos nuorodos
+          </Link>
         </div>
       ) : (
-        <form onSubmit={submit} className="space-y-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-          <p className="text-sm text-slate-600">Atstatote slaptažodį paskyrai <span className="font-medium text-slate-900">{email}</span>.</p>
-          <label className="block text-sm text-slate-700">
-            Naujas slaptažodis
+        <form onSubmit={submit} className="space-y-4">
+          <div>
+            <label className={labelClass}>Naujas slaptažodis</label>
             <input
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 outline-none focus:ring-2 focus:ring-sky-300"
+              className={`mt-1.5 ${inputClass}`}
             />
-          </label>
-          <label className="block text-sm text-slate-700">
-            Pakartokite slaptažodį
+          </div>
+          <div>
+            <label className={labelClass}>Pakartok slaptažodį</label>
             <input
               type="password"
               value={passwordConfirm}
               onChange={(e) => setPasswordConfirm(e.target.value)}
-              className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 outline-none focus:ring-2 focus:ring-sky-300"
+              className={`mt-1.5 ${inputClass}`}
             />
-          </label>
-          <p className="text-xs text-slate-500">
+          </div>
+          <p className="text-xs text-muted">
             Slaptažodį turi sudaryti bent 8 simboliai, didžiosios ir mažosios raidės bei skaičius.
           </p>
-          <button
-            type="submit"
-            disabled={loading}
-            className="inline-flex items-center justify-center rounded-full bg-slate-950 px-5 py-2 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:opacity-60"
-          >
-            {loading ? "Išsaugoma..." : "Atstatyti slaptažodį"}
+          <button type="submit" disabled={loading} className={primaryBtnClass}>
+            {loading ? "Išsaugoma…" : "Atstatyti slaptažodį"}
           </button>
         </form>
       )}
-    </div>
+    </AuthShell>
   );
 }

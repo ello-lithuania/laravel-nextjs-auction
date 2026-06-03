@@ -1,8 +1,10 @@
 "use client"
 
 import { useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useToast } from "../components/ToastProvider";
+import AuthShell, { inputClass, labelClass, primaryBtnClass } from "../components/AuthShell";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -75,37 +77,43 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="mx-auto max-w-md p-8">
-      <h1 className="mb-4 text-2xl font-semibold text-slate-900">Registracija</h1>
-      <form onSubmit={submit} className="space-y-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-        {error ? <div className="rounded border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</div> : null}
-        <label className="block text-sm text-slate-700">
-          Vardas
-          <input className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 outline-none focus:ring-2 focus:ring-sky-300" value={name} onChange={(e) => setName(e.target.value)} />
-        </label>
-        <label className="block text-sm text-slate-700">
-          El. paštas
-          <input type="email" className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 outline-none focus:ring-2 focus:ring-sky-300" value={email} onChange={(e) => setEmail(e.target.value)} />
-        </label>
-        <label className="block text-sm text-slate-700">
-          Miestas
-          <input className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 outline-none focus:ring-2 focus:ring-sky-300" value={city} onChange={(e) => setCity(e.target.value)} placeholder="Vilnius" />
-        </label>
-        <label className="block text-sm text-slate-700">
-          Slaptažodis
-          <input type="password" className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 outline-none focus:ring-2 focus:ring-sky-300" value={password} onChange={(e) => setPassword(e.target.value)} />
-        </label>
-        <label className="block text-sm text-slate-700">
-          Pakartokite slaptažodį
-          <input type="password" className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 outline-none focus:ring-2 focus:ring-sky-300" value={passwordConfirm} onChange={(e) => setPasswordConfirm(e.target.value)} />
-        </label>
-        <div className="flex items-center justify-between">
-          <button type="submit" disabled={loading} className="inline-flex items-center justify-center rounded-full bg-slate-950 px-5 py-2 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:opacity-60">
-            {loading ? "Kraunasi..." : "Registruotis"}
-          </button>
-          <a href="/login" className="text-sm text-slate-600 hover:underline">Jau turite paskyrą? Prisijungti</a>
+    <AuthShell title="Susikurk paskyrą" subtitle="Nemokamai. Statyk, parduok ir laimėk realiu laiku.">
+      <form onSubmit={submit} className="space-y-4">
+        {error ? (
+          <div className="rounded-md border-2 border-ink bg-red px-3 py-2 text-sm font-semibold text-white">
+            {error}
+          </div>
+        ) : null}
+        <div>
+          <label className={labelClass}>Vardas</label>
+          <input className={`mt-1.5 ${inputClass}`} value={name} onChange={(e) => setName(e.target.value)} />
         </div>
+        <div>
+          <label className={labelClass}>El. paštas</label>
+          <input type="email" className={`mt-1.5 ${inputClass}`} value={email} onChange={(e) => setEmail(e.target.value)} />
+        </div>
+        <div>
+          <label className={labelClass}>Miestas</label>
+          <input className={`mt-1.5 ${inputClass}`} value={city} onChange={(e) => setCity(e.target.value)} placeholder="Vilnius" />
+        </div>
+        <div>
+          <label className={labelClass}>Slaptažodis</label>
+          <input type="password" className={`mt-1.5 ${inputClass}`} value={password} onChange={(e) => setPassword(e.target.value)} />
+        </div>
+        <div>
+          <label className={labelClass}>Pakartok slaptažodį</label>
+          <input type="password" className={`mt-1.5 ${inputClass}`} value={passwordConfirm} onChange={(e) => setPasswordConfirm(e.target.value)} />
+        </div>
+        <button type="submit" disabled={loading} className={primaryBtnClass}>
+          {loading ? "Kuriama…" : "Registruotis 🎉"}
+        </button>
+        <p className="pt-1 text-center text-sm">
+          <span className="text-muted">Jau turi paskyrą? </span>
+          <Link href="/login" className="font-semibold text-green-deep hover:underline">
+            Prisijunk
+          </Link>
+        </p>
       </form>
-    </div>
+    </AuthShell>
   );
 }

@@ -8,6 +8,8 @@ use App\Models\Bid;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
 class AuctionController extends Controller
@@ -25,6 +27,60 @@ class AuctionController extends Controller
     public function show(Auction $auction): JsonResponse
     {
         return response()->json($auction);
+    }
+
+    /**
+     * Paskelbti naują skelbimą (aukcioną). Tik prisijungusiems.
+     * POST /api/auctions
+     */
+    public function store(Request $request): JsonResponse
+    {
+        $user = $request->user();
+
+        $validated = $request->validate([
+            'title' => 'required|string|max:160',
+            'description' => 'required|string|max:5000',
+            'category' => 'required|string|max:80',
+            'subcategory' => 'nullable|string|max:80',
+            'location' => 'required|string|max:80',
+            'starting_price' => 'required|numeric|min:1|max:9999999.99',
+            'duration_days' => 'required|integer|min:1|max:30',
+            'images' => 'required|array|min:1|max:6',
+            'images.*' => 'image|mimes:jpeg,jpg,png,webp|max:5120', // iki 5 MB
+        ]);
+
+        // Įkeliam nuotraukas į „uploads" diską (public/uploads — be symlink) ir
+        // surenkam jų viešus URL.
+        $gallery = [];
+        foreach ($request->file('images', []) as $file) {
+            $path = $file->store('auctions', 'uploads');
+            $gallery[] = Storage::disk('uploads')->url($path);
+        }
+
+        $auction = Auction::create([
+            'title' => $validated['title'],
+            'slug' => Str::slug($validated['title']) . '-' . Str::lower(Str::random(6)),
+            'description' => $validated['description'],
+            'category' => $validated['category'],
+            'subcategory' => $validated['subcategory'] ?? null,
+            'location' => $validated['location'],
+            'seller_name' => $user->name,
+            'seller_id' => $user->id,
+            'starting_price' => $validated['starting_price'],
+            'current_price' => $validated['starting_price'],
+            'commission_percent' => 0,
+            'status' => 'Live',
+            'ends_at' => now()->addDays((int) $validated['duration_days']),
+            'image_url' => $gallery[0] ?? null,
+            'gallery' => $gallery,
+            'is_featured' => false,
+            'bids_count' => 0,
+        ]);
+
+        return response()->json([
+            'message' => 'Skelbimas paskelbtas!',
+            'auction' => $auction,
+        ], 201);
     }
 
     public function bid(Request $request, Auction $auction): JsonResponse
@@ -52,7 +108,11 @@ class AuctionController extends Controller
         // the current state, re-check the rules, then write — all atomically.
         // Without the lock two requests can both pass the price check on stale
         // data and the higher bid can be silently overwritten by the lower one.
-        $bid = DB::transaction(function () use ($auction, $amount, $user) {
+        // Anti-snipe: jei statoma paskutinėmis sekundėmis, laikas pratęsiamas.
+        $extendWindow = 15; // sek.
+        $extended = false;
+
+        $bid = DB::transaction(function () use ($auction, $amount, $user, $extendWindow, &$extended) {
             /** @var Auction $locked */
             $locked = Auction::whereKey($auction->getKey())->lockForUpdate()->firstOrFail();
 
@@ -77,6 +137,17 @@ class AuctionController extends Controller
 
             $locked->current_price = $amount;
             $locked->bids_count = $locked->bids_count + 1;
+
+            // Anti-snipe: jei iki pabaigos liko <= $extendWindow sek., pratęsiam,
+            // kad niekas nelaimėtų vien dėl greitesnio interneto paskutinę akimirką.
+            if ($locked->ends_at !== null) {
+                $remaining = $locked->ends_at->getTimestamp() - now()->getTimestamp();
+                if ($remaining >= 0 && $remaining <= $extendWindow) {
+                    $locked->ends_at = now()->addSeconds($extendWindow);
+                    $extended = true;
+                }
+            }
+
             $locked->save();
 
             // The route is protected by auth:sanctum, so the bidder is the
@@ -92,6 +163,7 @@ class AuctionController extends Controller
             // Reflect the committed state back onto the model the caller holds.
             $auction->current_price = $locked->current_price;
             $auction->bids_count = $locked->bids_count;
+            $auction->ends_at = $locked->ends_at;
 
             return $bid;
         });
@@ -105,7 +177,7 @@ class AuctionController extends Controller
                 'bidder_name' => $bid->bidder_name,
                 'bidder_city' => $bid->bidder_city,
                 'created_at' => $bid->created_at?->toISOString(),
-            ]);
+            ], $auction->ends_at?->toISOString(), $extended);
         } catch (\Throwable $e) {
             report($e);
         }
@@ -114,6 +186,7 @@ class AuctionController extends Controller
             'message' => 'Bid placed successfully',
             'auction' => $auction,
             'bid' => $bid,
+            'extended' => $extended,
         ]);
     }
 

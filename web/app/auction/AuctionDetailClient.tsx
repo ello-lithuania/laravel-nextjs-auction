@@ -1,27 +1,23 @@
 "use client";
 
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
+import Link from "next/link";
+import { motion, AnimatePresence, useAnimationControls } from "motion/react";
 import { useAuth } from "../components/AuthProvider";
 import { useToast } from "../components/ToastProvider";
 import BidsList, { type Bid } from "../components/BidsList";
+import AnimatedPrice from "../components/AnimatedPrice";
+import ShareButtons from "../components/ShareButtons";
+import WinModal from "../components/WinModal";
+import SoundToggle from "../components/SoundToggle";
+import ChatPanel from "../components/ChatPanel";
 import { getEcho } from "../lib/echo";
+import { formatEurPrecise } from "../lib/format";
+import { statusLabel } from "../lib/labels";
+import { fireBidConfetti, fireWinConfetti } from "../lib/confetti";
+import { playBidSound, playWinSound } from "../lib/sound";
 
 const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://127.0.0.1:8000";
-
-const formatPrice = (value: number | string) =>
-  new Intl.NumberFormat("lt-LT", {
-    style: "currency",
-    currency: "EUR",
-  }).format(Number(value));
-
-const formatCountdown = (seconds: number) => {
-  if (seconds <= 0) return "Aukcionas baigėsi";
-  const days = Math.floor(seconds / 86400);
-  const hours = Math.floor((seconds % 86400) / 3600);
-  const minutes = Math.floor((seconds % 3600) / 60);
-  const secs = seconds % 60;
-  return `${days ? `${days}d ` : ""}${hours.toString().padStart(2, "0")}h ${minutes.toString().padStart(2, "0")}m ${secs.toString().padStart(2, "0")}s`;
-};
 
 // Break the remaining time into labelled segments for the countdown boxes.
 const countdownParts = (seconds: number) => {
@@ -50,6 +46,13 @@ type Auction = {
   image_url: string;
   gallery: string[];
   bids_count: number;
+  seller_id?: number | null;
+};
+
+type ChatThread = {
+  id: number;
+  counterpart: { id: number; name: string };
+  messages_count: number;
 };
 
 export default function AuctionDetailClient({ auction, slug }: { auction?: Auction; slug?: string }) {
@@ -64,6 +67,31 @@ export default function AuctionDetailClient({ auction, slug }: { auction?: Aucti
   const [bids, setBids] = useState<Bid[]>([]);
   const [bidsLoading, setBidsLoading] = useState(true);
   const [activeImage, setActiveImage] = useState(0);
+  // „+X €" pop virš kainos po sėkmingo statymo.
+  const [pricePop, setPricePop] = useState<{ key: number; text: string } | null>(null);
+  // Hidruojam autentifikacijos būseną po mount (kad nebūtų SSR/CSR neatitikimo).
+  const [mounted, setMounted] = useState(false);
+  // Laimėjimo ekranas — kai aukcionas baigiasi ir esi aukščiausias siūlytojas.
+  const [showWin, setShowWin] = useState(false);
+  const winShownRef = useRef(false);
+  // Pokalbiai pirkėjas↔pardavėjas.
+  const [chat, setChat] = useState<{ id: number; name: string } | null>(null);
+  const [inbox, setInbox] = useState<ChatThread[] | null>(null);
+  const [chatBusy, setChatBusy] = useState(false);
+
+  // Refs, kad realtime klausytojo closure matytų šviežias reikšmes.
+  const myLastBidRef = useRef<number | null>(null);
+  const userNameRef = useRef<string | undefined>(undefined);
+  const bidBtnRef = useRef<HTMLButtonElement | null>(null);
+  const shakeControls = useAnimationControls();
+
+  useEffect(() => {
+    userNameRef.current = user?.name;
+  }, [user?.name]);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // Merge a bid into the list: dedupe by id, newest first, keep last 10.
   const mergeBid = (incoming: Bid) =>
@@ -95,6 +123,20 @@ export default function AuctionDetailClient({ auction, slug }: { auction?: Aucti
     const diff = Math.max(0, Math.floor((endsAtDate.getTime() - Date.now()) / 1000));
     setSecondsLeft(diff);
   }, [endsAtDate]);
+
+  // Laimėjimas: aukcionas baigėsi (secondsLeft==0) IR esi aukščiausias siūlytojas
+  // (paskutinis tavo statymas vis dar lygus dabartinei kainai → niekas neaplenkė).
+  useEffect(() => {
+    if (winShownRef.current || !mounted || !user) return;
+    if (secondsLeft > 0) return;
+    const myLast = myLastBidRef.current;
+    if (myLast != null && currentPrice > 0 && currentPrice <= myLast) {
+      winShownRef.current = true;
+      setShowWin(true);
+      fireWinConfetti();
+      playWinSound();
+    }
+  }, [secondsLeft, mounted, user, currentPrice]);
 
   // Client-fetch auction if not provided by server
   useEffect(() => {
@@ -159,25 +201,43 @@ export default function AuctionDetailClient({ auction, slug }: { auction?: Aucti
     const channelName = `auction.${id}`;
     echo
       .channel(channelName)
-      .listen(".new-bid", (event: { currentPrice: number; bidsCount: number; bid: Bid }) => {
+      .listen(".new-bid", (event: { currentPrice: number; bidsCount: number; bid: Bid; endsAt?: string | null; extended?: boolean }) => {
         setAuctionState((prev) =>
           prev
             ? {
                 ...prev,
                 current_price: Number(event.currentPrice),
                 bids_count: Number(event.bidsCount),
+                ends_at: event.endsAt ?? prev.ends_at,
               }
             : prev
         );
         if (event.bid) {
           mergeBid(event.bid);
         }
+        if (event.extended) {
+          toast.info("⏱ +15 sek — aukcionas pratęstas!");
+        }
+        // „Tave aplenkė" — jei buvau aukščiausias, o kažkas pastatė daugiau.
+        const myLast = myLastBidRef.current;
+        const incomingName = event.bid?.bidder_name;
+        if (
+          myLast != null &&
+          Number(event.currentPrice) > myLast &&
+          incomingName !== userNameRef.current
+        ) {
+          toast.error("Tave aplenkė! Statyk dar 💪");
+          shakeControls.start({
+            x: [0, -8, 8, -6, 6, 0],
+            transition: { duration: 0.5 },
+          });
+        }
       });
 
     return () => {
       echo.leave(channelName);
     };
-  }, [auctionState?.id]);
+  }, [auctionState?.id, toast, shakeControls]);
 
   const handleBid = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -193,6 +253,7 @@ export default function AuctionDetailClient({ auction, slug }: { auction?: Aucti
       toast.error("Aukcionas jau baigėsi.");
       return;
     }
+    const delta = bidAmount - currentPrice;
     setSaving(true);
     try {
       if (!auctionState) throw new Error("Aukcionas nerastas");
@@ -231,7 +292,20 @@ export default function AuctionDetailClient({ auction, slug }: { auction?: Aucti
       if (data.bid) {
         mergeBid({ ...data.bid, amount: Number(data.bid.amount) } as Bid);
       }
-      toast.success("Pasiūlymas sėkmingai pateiktas!");
+      // 🎉 JUICE: confetti nuo mygtuko + „+X €" pop + įsimenam savo statymą.
+      myLastBidRef.current = bidAmount;
+      const r = bidBtnRef.current?.getBoundingClientRect();
+      fireBidConfetti(
+        r
+          ? { x: (r.left + r.width / 2) / window.innerWidth, y: r.top / window.innerHeight }
+          : undefined
+      );
+      playBidSound();
+      setPricePop({ key: Date.now(), text: `+${Math.round(delta)} €` });
+      toast.success("Pasiūlymas pateiktas! 🚀");
+      if (data.extended) {
+        toast.info("⏱ +15 sek — aukcionas pratęstas!");
+      }
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Nepavyko pateikti pasiūlymą.");
     } finally {
@@ -239,43 +313,54 @@ export default function AuctionDetailClient({ auction, slug }: { auction?: Aucti
     }
   };
 
+  // Pirkėjas atidaro (ar tęsia) pokalbį su pardavėju.
+  const startChatWithSeller = async () => {
+    if (!token || !auctionState) return;
+    setChatBusy(true);
+    try {
+      const res = await fetch(
+        `${apiBaseUrl}/api/auctions/${encodeURIComponent(auctionState.slug)}/conversation`,
+        { method: "POST", headers: { Accept: "application/json", Authorization: `Bearer ${token}` } },
+      );
+      const data = await res.json().catch(() => null);
+      if (!res.ok) throw new Error(data?.message ?? "Nepavyko atidaryti pokalbio.");
+      setChat({ id: data.id, name: data.counterpart?.name ?? auctionState.seller_name });
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Klaida atidarant pokalbį.");
+    } finally {
+      setChatBusy(false);
+    }
+  };
+
+  // Pardavėjas pamato visus pokalbius, atidarytus jo aukcione.
+  const openInbox = async () => {
+    if (!token || !auctionState) return;
+    setChatBusy(true);
+    try {
+      const res = await fetch(
+        `${apiBaseUrl}/api/auctions/${encodeURIComponent(auctionState.slug)}/conversations`,
+        { headers: { Accept: "application/json", Authorization: `Bearer ${token}` } },
+      );
+      const data = await res.json().catch(() => null);
+      if (!res.ok) throw new Error(data?.message ?? "Nepavyko įkelti pokalbių.");
+      setInbox(Array.isArray(data) ? data : []);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Klaida.");
+    } finally {
+      setChatBusy(false);
+    }
+  };
+
   if (!auctionState) {
     return (
-      <div className="space-y-8">
-        <div className="grid gap-8 lg:grid-cols-[1.5fr_1fr]">
-          <div className="space-y-6 rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm">
-            <div className="h-[420px] rounded-[1.5rem] bg-slate-200 animate-pulse" />
-            <div className="grid gap-4 sm:grid-cols-3">
-              <div className="h-28 rounded-3xl bg-slate-200" />
-              <div className="h-28 rounded-3xl bg-slate-200" />
-              <div className="h-28 rounded-3xl bg-slate-200" />
-            </div>
-          </div>
-          <aside className="space-y-6 rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm">
-            <div className="space-y-3">
-              <div className="flex items-center justify-between gap-4">
-                <div>
-                  <p className="text-sm uppercase tracking-[0.24em] text-slate-500">Įkeliama</p>
-                  <p className="mt-2 text-3xl font-semibold text-slate-950">…</p>
-                </div>
-                <div className="rounded-3xl bg-slate-100 px-4 py-2 text-sm text-slate-700">—</div>
-              </div>
-              <div className="grid gap-3 rounded-[1.5rem] bg-slate-50 p-4 text-sm text-slate-600">
-                <div className="flex items-center justify-between">
-                  <span>Baigiasi</span>
-                  <span>—</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span>Laikas liko</span>
-                  <span className="font-semibold text-slate-950">—</span>
-                </div>
-              </div>
-            </div>
-            <div className="space-y-4">
-              <input disabled className="w-full rounded-3xl border border-slate-200 bg-slate-50 px-4 py-3 text-base text-slate-400" />
-              <button disabled className="inline-flex w-full items-center justify-center rounded-full bg-slate-400 px-5 py-3 text-sm font-semibold text-white">Įkeliama…</button>
-            </div>
-          </aside>
+      <div className="grid gap-8 lg:grid-cols-[1.5fr_1fr]">
+        <div className="chunky rounded-chunk p-5">
+          <div className="aspect-4/3 animate-pulse rounded-chunk border-2 border-ink bg-sand" />
+        </div>
+        <div className="chunky rounded-chunk p-6">
+          <div className="h-8 w-1/2 animate-pulse rounded bg-sand" />
+          <div className="mt-4 h-12 w-2/3 animate-pulse rounded bg-sand" />
+          <div className="mt-6 h-12 animate-pulse rounded-chunk bg-sand" />
         </div>
       </div>
     );
@@ -288,6 +373,8 @@ export default function AuctionDetailClient({ auction, slug }: { auction?: Aucti
       : [];
   const mainImage = gallery[activeImage] ?? gallery[0];
   const isEnded = secondsLeft <= 0;
+  const urgent = !isEnded && secondsLeft <= 300;
+  const critical = !isEnded && secondsLeft <= 60;
   const quickSteps = [1, 10, 50, 100];
 
   // Show only meaningful countdown segments: drop leading zero units (e.g. when
@@ -298,20 +385,98 @@ export default function AuctionDetailClient({ auction, slug }: { auction?: Aucti
 
   return (
     <div className="space-y-8">
-      <div className="grid gap-8 lg:grid-cols-[1.5fr_1fr]">
-        <div className="space-y-6 rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm">
-          {mainImage ? (
-            <div className="relative overflow-hidden rounded-[1.5rem]">
-              <img src={mainImage} alt={auctionState.title} className="h-[420px] w-full object-cover" />
-              <div className="absolute left-4 top-4 flex gap-2">
-                <span className="rounded-full bg-white/90 px-3 py-1 text-xs font-semibold uppercase tracking-[0.22em] text-slate-900 shadow-sm">
-                  {auctionState.category}
-                </span>
+      <AnimatePresence>
+        {showWin ? (
+          <WinModal
+            title={auctionState.title}
+            price={currentPrice}
+            sellerName={auctionState.seller_name}
+            onClose={() => setShowWin(false)}
+          />
+        ) : null}
+      </AnimatePresence>
+
+      {/* Pokalbio langas */}
+      <AnimatePresence>
+        {chat && token ? (
+          <ChatPanel
+            token={token}
+            conversationId={chat.id}
+            counterpartName={chat.name}
+            onClose={() => setChat(null)}
+          />
+        ) : null}
+      </AnimatePresence>
+
+      {/* Pardavėjo gautų pokalbių sąrašas */}
+      <AnimatePresence>
+        {inbox ? (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-ink/60 p-5"
+            onClick={() => setInbox(null)}
+          >
+            <motion.div
+              initial={{ scale: 0.92, y: 16 }}
+              animate={{ scale: 1, y: 0 }}
+              onClick={(e) => e.stopPropagation()}
+              className="w-full max-w-md rounded-chunk border-[3px] border-ink bg-cream p-5 shadow-chunky-lg"
+            >
+              <div className="flex items-center justify-between">
+                <h3 className="font-display text-xl font-bold">Pokalbiai</h3>
+                <button
+                  type="button"
+                  onClick={() => setInbox(null)}
+                  aria-label="Uždaryti"
+                  className="press flex h-8 w-8 items-center justify-center rounded-md border-2 border-ink bg-paper font-bold shadow-chunky-sm"
+                >
+                  ✕
+                </button>
               </div>
-            </div>
-          ) : (
-            <div className="h-[420px] rounded-[1.5rem] bg-slate-200" />
-          )}
+              {inbox.length === 0 ? (
+                <p className="mt-5 text-center text-sm text-muted">Dar nėra pokalbių šiame aukcione.</p>
+              ) : (
+                <div className="mt-4 space-y-2.5">
+                  {inbox.map((t) => (
+                    <button
+                      key={t.id}
+                      type="button"
+                      onClick={() => {
+                        setChat({ id: t.id, name: t.counterpart.name });
+                        setInbox(null);
+                      }}
+                      className="press flex w-full items-center justify-between rounded-md border-2 border-ink bg-paper px-4 py-3 text-left shadow-chunky-sm"
+                    >
+                      <span className="font-bold">{t.counterpart.name}</span>
+                      <span className="text-xs font-semibold text-muted">{t.messages_count} žin.</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </motion.div>
+          </motion.div>
+        ) : null}
+      </AnimatePresence>
+
+      <div className="grid gap-8 lg:grid-cols-[1.5fr_1fr]">
+        {/* ============ KAIRĖ: nuotrauka + info ============ */}
+        <div className="chunky space-y-5 rounded-chunk p-5">
+          <div className="relative overflow-hidden rounded-chunk border-[2.5px] border-ink bg-sand">
+            <img
+              src={mainImage || "/placeholder.svg"}
+              alt={auctionState.title}
+              onError={(e) => {
+                const img = e.currentTarget;
+                if (!img.src.endsWith("/placeholder.svg")) img.src = "/placeholder.svg";
+              }}
+              className="aspect-4/3 w-full object-cover"
+            />
+            <span className="absolute left-3 top-3 rounded-[5px] border-2 border-ink bg-gold px-2.5 py-1 text-xs font-bold uppercase tracking-wide shadow-chunky-sm">
+              {auctionState.category}
+            </span>
+          </div>
           {gallery.length > 1 ? (
             <div className="grid grid-cols-4 gap-3">
               {gallery.slice(0, 4).map((src, idx) => (
@@ -319,102 +484,196 @@ export default function AuctionDetailClient({ auction, slug }: { auction?: Aucti
                   key={idx}
                   type="button"
                   onClick={() => setActiveImage(idx)}
-                  className={`overflow-hidden rounded-2xl border-2 transition ${
-                    activeImage === idx ? "border-sky-500" : "border-transparent hover:border-slate-200"
+                  className={`overflow-hidden rounded-md border-[2.5px] transition ${
+                    activeImage === idx ? "border-green shadow-chunky-sm" : "border-ink"
                   }`}
                 >
-                  <img src={src} alt={`${auctionState.title} ${idx + 1}`} className="h-20 w-full object-cover" />
+                  <img src={src} alt={`${auctionState.title} ${idx + 1}`} className="aspect-4/3 w-full object-cover" />
                 </button>
               ))}
             </div>
           ) : null}
-          <div className="space-y-3">
-            <h1 className="text-4xl font-semibold text-slate-950">{auctionState.title}</h1>
-            <div className="flex flex-wrap gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-slate-600">
-              <span className="rounded-full bg-slate-100 px-3 py-1">📍 {auctionState.location}</span>
-              <span className="rounded-full bg-slate-100 px-3 py-1">{auctionState.commission_percent}% komisinis</span>
-              <span className="rounded-full bg-slate-100 px-3 py-1">{auctionState.bids_count} pasiūlymai</span>
+          <div>
+            <h1 className="font-display text-3xl font-extrabold tracking-tight sm:text-4xl">
+              {auctionState.title}
+            </h1>
+            <div className="mt-3 flex flex-wrap gap-2 text-xs font-bold uppercase tracking-wide">
+              <span className="rounded-[5px] border-2 border-ink bg-sand px-2.5 py-1">📍 {auctionState.location}</span>
+              <span className="rounded-[5px] border-2 border-ink bg-green px-2.5 py-1 text-white">Nemokama</span>
+              <span className="rounded-[5px] border-2 border-ink bg-gold px-2.5 py-1">{auctionState.bids_count} statymai</span>
             </div>
-            <p className="text-base leading-7 text-slate-600">{auctionState.description}</p>
+            <p className="mt-4 text-[15px] leading-relaxed text-muted">{auctionState.description}</p>
           </div>
         </div>
 
-        <aside className="relative overflow-hidden rounded-[2rem] border border-slate-200 bg-slate-950 text-white shadow-xl shadow-slate-200/20">
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,_rgba(56,189,248,0.22),_transparent_36%),radial-gradient(circle_at_bottom_left,_rgba(251,191,36,0.12),_transparent_30%)]" />
-          <div className="relative space-y-6 p-6 sm:p-8">
-            <div className="flex items-center justify-between gap-4">
-              <div>
-                <p className="text-sm uppercase tracking-[0.24em] text-slate-400">Dabartinė kaina</p>
-                <p className="mt-2 text-4xl font-semibold">{formatPrice(auctionState.current_price)}</p>
-              </div>
-              <span className={`rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] ${
-                isEnded ? "bg-red-500/20 text-red-300" : "bg-emerald-500/15 text-emerald-300"
-              }`}>
-                {isEnded ? "Baigėsi" : "● Live"}
-              </span>
-            </div>
-
-            <div>
-              <p className="text-sm uppercase tracking-[0.24em] text-slate-400">Laikas liko</p>
-              {isEnded ? (
-                <p className="mt-3 text-xl font-semibold text-red-300">Aukcionas baigėsi</p>
-              ) : (
-                <div className="mt-3 grid gap-2" style={{ gridTemplateColumns: `repeat(${visibleParts.length}, minmax(0, 1fr))` }}>
-                  {visibleParts.map((part) => (
-                    <div key={part.label} className="rounded-2xl bg-slate-900/80 py-3 text-center">
-                      <p className="text-2xl font-semibold tabular-nums">{part.value.toString().padStart(2, "0")}</p>
-                      <p className="mt-1 text-[0.65rem] uppercase tracking-[0.2em] text-slate-400">{part.label}</p>
-                    </div>
-                  ))}
-                </div>
-              )}
-              <p className="mt-3 text-xs text-slate-400">
-                Baigiasi {endsAtDate.toLocaleString("lt-LT", { day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" })}
-              </p>
-            </div>
-
-            <form className="space-y-3" onSubmit={handleBid}>
-              <label className="block text-sm font-semibold text-slate-200">Tavo pasiūlymas</label>
-              <div className="relative">
-                <input
-                  type="number"
-                  step="0.01"
-                  min={minBid}
-                  value={bidAmount}
-                  onChange={(e) => setBidAmount(Number(e.target.value))}
-                  className="w-full rounded-3xl border border-slate-700 bg-slate-900/80 px-4 py-3 pr-10 text-base text-white outline-none transition focus:border-sky-500"
-                />
-                <span className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-slate-400">€</span>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {quickSteps.map((step) => (
-                  <button
-                    key={step}
-                    type="button"
-                    onClick={() => setBidAmount(Number((currentPrice + step).toFixed(2)))}
-                    className="rounded-full border border-slate-700 bg-slate-900/60 px-3 py-1.5 text-xs font-semibold text-slate-200 transition hover:border-sky-500 hover:text-white"
+        {/* ============ DEŠINĖ: statymo panelė ============ */}
+        <motion.aside animate={shakeControls} className="chunky-lg h-fit space-y-6 rounded-chunk p-6 sm:p-7">
+          <div className="flex items-start justify-between gap-3">
+            <div className="relative">
+              <p className="text-[11px] font-bold uppercase tracking-wide text-muted">Dabartinė kaina</p>
+              <AnimatedPrice
+                value={currentPrice}
+                className="font-display text-[40px] font-extrabold leading-none tracking-tight sm:text-5xl"
+              />
+              {/* „+X €" pop */}
+              <AnimatePresence>
+                {pricePop ? (
+                  <motion.span
+                    key={pricePop.key}
+                    initial={{ opacity: 0, y: 0, scale: 0.6 }}
+                    animate={{ opacity: 1, y: -34, scale: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.7, ease: "easeOut" }}
+                    onAnimationComplete={() => setPricePop(null)}
+                    className="pointer-events-none absolute -right-2 top-4 font-display text-xl font-extrabold text-green-deep"
                   >
-                    +{step} €
-                  </button>
-                ))}
-              </div>
-              <p className="text-xs text-slate-400">Mažiausias galimas pasiūlymas: {formatPrice(minBid)}</p>
-              <button
-                type="submit"
-                disabled={saving || isEnded}
-                className="inline-flex w-full items-center justify-center rounded-full bg-sky-500 px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-sky-500/20 transition hover:bg-sky-400 disabled:cursor-not-allowed disabled:bg-slate-700 disabled:text-slate-400 disabled:shadow-none"
+                    {pricePop.text}
+                  </motion.span>
+                ) : null}
+              </AnimatePresence>
+            </div>
+            <div className="flex shrink-0 flex-col items-end gap-2">
+              <span
+                className={`rounded-[5px] border-2 border-ink px-2.5 py-1 text-xs font-bold uppercase ${
+                  isEnded ? "bg-red text-white" : "bg-green text-white"
+                }`}
               >
-                {saving ? "Siunčiama…" : isEnded ? "Aukcionas baigėsi" : "Pateikti pasiūlymą"}
-              </button>
-            </form>
-
-            <div className="rounded-3xl border border-slate-700/60 bg-slate-900/70 p-4 text-sm text-slate-300">
-              <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Pardavėjas</p>
-              <p className="mt-1 font-semibold text-white">{auctionState.seller_name}</p>
-              <p className="mt-1 text-slate-400">📍 {auctionState.location}</p>
+                {isEnded ? "Baigėsi" : "● VYKSTA"}
+              </span>
+              <SoundToggle />
             </div>
           </div>
-        </aside>
+
+          {/* Countdown */}
+          <div>
+            <p className="text-[11px] font-bold uppercase tracking-wide text-muted">
+              {isEnded ? "Aukcionas" : "Liko laiko"}
+            </p>
+            {isEnded ? (
+              <p className="mt-2 font-display text-xl font-bold text-red">Aukcionas baigėsi</p>
+            ) : (
+              <div
+                className="mt-2 grid gap-2"
+                style={{ gridTemplateColumns: `repeat(${visibleParts.length}, minmax(0, 1fr))` }}
+              >
+                {visibleParts.map((part) => (
+                  <div
+                    key={part.label}
+                    className={`rounded-md border-2 border-ink py-2.5 text-center ${
+                      urgent ? "bg-red text-white" : "bg-cream"
+                    } ${critical ? "animate-urgent" : ""}`}
+                  >
+                    <p className="font-display text-2xl font-extrabold tabular-nums leading-none">
+                      {part.value.toString().padStart(2, "0")}
+                    </p>
+                    <p className="mt-1 text-[10px] font-bold uppercase tracking-wide opacity-70">
+                      {part.label}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            )}
+            <p className="mt-2 text-xs text-muted">
+              Baigiasi{" "}
+              {endsAtDate.toLocaleString("lt-LT", { day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" })}
+            </p>
+          </div>
+
+          {/* Statymo forma — tik prisijungusiems (kiti negali statyti) */}
+          {mounted && user ? (
+          <form className="space-y-3" onSubmit={handleBid}>
+            <label className="block text-sm font-bold">Tavo statymas</label>
+            <div className="relative">
+              <input
+                type="number"
+                step="0.01"
+                min={minBid}
+                value={bidAmount}
+                onChange={(e) => setBidAmount(Number(e.target.value))}
+                className="w-full rounded-md border-[2.5px] border-ink bg-paper px-4 py-3 pr-9 font-display text-lg font-bold outline-none focus:shadow-chunky-sm"
+              />
+              <span className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 font-display font-bold text-muted">€</span>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {quickSteps.map((step) => (
+                <button
+                  key={step}
+                  type="button"
+                  onClick={() => setBidAmount(Number((currentPrice + step).toFixed(2)))}
+                  className="press rounded-[5px] border-2 border-ink bg-sand px-3 py-1.5 text-sm font-bold shadow-chunky-sm"
+                >
+                  +{step} €
+                </button>
+              ))}
+            </div>
+            <p className="text-xs text-muted">Mažiausias statymas: {formatEurPrecise(minBid)}</p>
+            <button
+              ref={bidBtnRef}
+              type="submit"
+              disabled={saving || isEnded}
+              className="press flex w-full items-center justify-center gap-2 rounded-md border-[2.5px] border-ink bg-green py-3.5 font-display text-lg font-bold text-white shadow-chunky disabled:cursor-not-allowed disabled:border-muted disabled:bg-muted disabled:shadow-none"
+            >
+              {saving ? "Statoma…" : isEnded ? "Aukcionas baigėsi" : "STATYTI 🚀"}
+            </button>
+          </form>
+          ) : (
+            <div className="rounded-md border-2 border-ink bg-cream p-5 text-center">
+              <p className="font-display text-lg font-bold">Nori statyti? 🚀</p>
+              <p className="mt-1 text-sm text-muted">
+                Prisijunk arba susikurk paskyrą — tai nemokama.
+              </p>
+              <div className="mt-4 flex gap-2.5">
+                <Link
+                  href="/login"
+                  className="press flex-1 rounded-md border-[2.5px] border-ink bg-green py-3 font-display font-bold text-white shadow-chunky-sm"
+                >
+                  Prisijungti
+                </Link>
+                <Link
+                  href="/register"
+                  className="press flex-1 rounded-md border-[2.5px] border-ink bg-paper py-3 font-display font-bold shadow-chunky-sm"
+                >
+                  Registruotis
+                </Link>
+              </div>
+            </div>
+          )}
+
+          {/* Pardavėjas */}
+          <div className="rounded-md border-2 border-ink bg-cream p-4">
+            <p className="text-[11px] font-bold uppercase tracking-wide text-muted">Pardavėjas</p>
+            <p className="mt-1 font-display text-lg font-bold">{auctionState.seller_name}</p>
+            <p className="mt-0.5 text-sm text-muted">📍 {auctionState.location}</p>
+          </div>
+
+          {/* Pokalbis pirkėjas↔pardavėjas */}
+          {mounted && user && auctionState.seller_id ? (
+            user.id === auctionState.seller_id ? (
+              <button
+                type="button"
+                onClick={openInbox}
+                disabled={chatBusy}
+                className="press w-full rounded-md border-[2.5px] border-ink bg-ink py-3 font-display font-bold text-cream shadow-chunky-sm disabled:opacity-60"
+              >
+                💬 Pokalbiai su pirkėjais
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={startChatWithSeller}
+                disabled={chatBusy}
+                className="press w-full rounded-md border-[2.5px] border-ink bg-gold py-3 font-display font-bold shadow-chunky-sm disabled:opacity-60"
+              >
+                💬 Susisiekti su pardavėju
+              </button>
+            )
+          ) : null}
+
+          {/* Dalijimasis — pasiek daugiau pirkėjų */}
+          <div className="rounded-md border-2 border-ink bg-cream p-4">
+            <ShareButtons title={auctionState.title} label="Pasidalink ir pritrauk pirkėjų:" />
+          </div>
+        </motion.aside>
       </div>
 
       <BidsList bids={bids} loading={bidsLoading} />

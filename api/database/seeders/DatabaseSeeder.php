@@ -20,6 +20,7 @@ class DatabaseSeeder extends Seeder
             UserSeeder::class,
             AuctionSeeder::class,
             BidSeeder::class,
+            PostSeeder::class,
         ]);
     }
 }

@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="900" viewBox="0 0 1200 900" role="img" aria-label="Nuotraukos nėra">
+  <rect width="1200" height="900" fill="#e2e8f0"/>
+  <g fill="none" stroke="#94a3b8" stroke-width="14" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="430" y="335" width="340" height="240" rx="20"/>
+    <circle cx="515" cy="415" r="28"/>
+    <path d="M455 545l85-80 60 55 75-70 70 95"/>
+  </g>
+  <text x="600" y="660" font-family="system-ui, -apple-system, Segoe UI, Roboto, sans-serif" font-size="44" font-weight="600" fill="#64748b" text-anchor="middle">Dekaukciona</text>
+  <text x="600" y="710" font-family="system-ui, -apple-system, Segoe UI, Roboto, sans-serif" font-size="30" fill="#94a3b8" text-anchor="middle">Nuotraukos nėra</text>
+</svg>

@@ -24,6 +24,13 @@ class User extends Authenticatable
         'email',
         'city',
         'password',
+        'billing_type',
+        'billing_name',
+        'billing_code',
+        'billing_vat',
+        'billing_address',
+        'billing_phone',
+        'billing_iban',
     ];
 
     /**

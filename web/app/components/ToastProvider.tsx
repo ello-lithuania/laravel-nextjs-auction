@@ -1,6 +1,7 @@
 "use client"
 
 import React, { createContext, useCallback, useContext, useMemo, useState } from "react";
+import { motion, AnimatePresence } from "motion/react";
 
 type Toast = { id: string; type: "success" | "error" | "info"; message: string };
 
@@ -40,18 +41,28 @@ export default function ToastProvider({ children }: { children: React.ReactNode 
     <Ctx.Provider value={ctx}>
       {children}
       <div className="pointer-events-none fixed bottom-6 right-6 z-50 flex flex-col gap-3">
-        {toasts.map((t) => (
-          <div
-            key={t.id}
-            className={`pointer-events-auto max-w-xs rounded-lg px-4 py-3 shadow-lg transition transform ${
-              t.type === "success" ? "bg-green-600 text-white" : t.type === "error" ? "bg-red-600 text-white" : "bg-slate-800 text-white"
-            }`}
-            role="status"
-            aria-live="polite"
-          >
-            <div className="text-sm">{t.message}</div>
-          </div>
-        ))}
+        <AnimatePresence>
+          {toasts.map((t) => (
+            <motion.div
+              key={t.id}
+              initial={{ opacity: 0, x: 40, scale: 0.9 }}
+              animate={{ opacity: 1, x: 0, scale: 1 }}
+              exit={{ opacity: 0, x: 40, scale: 0.9 }}
+              transition={{ type: "spring", stiffness: 400, damping: 28 }}
+              className={`pointer-events-auto max-w-xs rounded-chunk border-[2.5px] border-ink px-4 py-3 font-semibold shadow-chunky ${
+                t.type === "success"
+                  ? "bg-green text-white"
+                  : t.type === "error"
+                    ? "bg-red text-white"
+                    : "bg-ink text-cream"
+              }`}
+              role="status"
+              aria-live="polite"
+            >
+              <div className="text-sm">{t.message}</div>
+            </motion.div>
+          ))}
+        </AnimatePresence>
       </div>
     </Ctx.Provider>
   );
