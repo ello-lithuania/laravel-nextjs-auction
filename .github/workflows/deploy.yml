@@ -67,7 +67,10 @@ jobs:
           server-dir: /public_html/
           protocol: ftps
           port: 21
-          timeout: 60000
+          # Long control-socket timeout: a clean full upload (after the sync
+          # state was reset by an SSH deploy) pushes many small Next files over
+          # FTPS, which Hostinger throttles.
+          timeout: 600000
 
   deploy-api:
     runs-on: ubuntu-latest

@@ -76,8 +76,11 @@ EOF
     rm -f .env.production.local
     # Upload the built site. First delete the old hashed assets so stale tabs
     # can't load a previous build's JS (old chunk -> 404 -> Next reloads to the
-    # fresh build). The `backend` symlink (API) and .htaccess are left untouched.
-    tar czf - -C out . | $SSH "rm -rf '$WEB_DIR/_next' && tar xzf - -C '$WEB_DIR'"
+    # fresh build). Also drop the FTP-Deploy-Action sync-state file: an SSH
+    # deploy makes it stale, and the Action would then try to delete folders we
+    # already removed (FTP 550). Clearing it forces the next CI run to do a clean
+    # full upload. The `backend` symlink (API) and .htaccess are left untouched.
+    tar czf - -C out . | $SSH "rm -rf '$WEB_DIR/_next' '$WEB_DIR/.ftp-deploy-sync-state.json' && tar xzf - -C '$WEB_DIR'"
   )
   echo "    WEB done."
 }
