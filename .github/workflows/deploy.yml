@@ -43,12 +43,16 @@ jobs:
       - name: Build static export
         working-directory: ./web
         env:
+          # Hardcoded (not secret, stable). Do NOT use `${{ vars.X || default }}`
+          # here — an empty/misconfigured repo Variable overrode the default and
+          # baked an EMPTY NEXT_PUBLIC_API_URL into the bundle, so the browser
+          # fetched `/api/...` (no `/backend`) → 404 → fell back to demo data.
           NEXT_TELEMETRY_DISABLED: "1"
-          NEXT_PUBLIC_API_URL: ${{ vars.NEXT_PUBLIC_API_URL || 'https://dekaukciona.lt/backend' }}
-          NEXT_PUBLIC_REVERB_APP_KEY: ${{ vars.NEXT_PUBLIC_REVERB_APP_KEY || 'auction-key' }}
-          NEXT_PUBLIC_REVERB_HOST: ${{ vars.NEXT_PUBLIC_REVERB_HOST || 'dekaukciona.lt' }}
-          NEXT_PUBLIC_REVERB_PORT: ${{ vars.NEXT_PUBLIC_REVERB_PORT || '443' }}
-          NEXT_PUBLIC_REVERB_SCHEME: ${{ vars.NEXT_PUBLIC_REVERB_SCHEME || 'https' }}
+          NEXT_PUBLIC_API_URL: "https://dekaukciona.lt/backend"
+          NEXT_PUBLIC_REVERB_APP_KEY: "auction-key"
+          NEXT_PUBLIC_REVERB_HOST: "dekaukciona.lt"
+          NEXT_PUBLIC_REVERB_PORT: "443"
+          NEXT_PUBLIC_REVERB_SCHEME: "https"
         run: |
           npm run build
           cp deploy/public_html.htaccess out/.htaccess
