@@ -68,3 +68,27 @@ export function getAllPosts(): Post[] {
 export function getPostBySlug(slug: string): Post | undefined {
   return getAllPosts().find((p) => p.slug === slug);
 }
+
+// Susiję straipsniai „Kažkas jus gali sudominti" karuselei ir sidebar'ui.
+// Reitinguojam pagal bendrų raktažodžių kiekį, likusią vietą užpildom naujausiais.
+export function getRelatedPosts(slug: string, limit = 6): Omit<Post, "body">[] {
+  const all = getAllPosts();
+  const current = all.find((p) => p.slug === slug);
+  if (!current) return all.slice(0, limit).map(stripBody);
+
+  const own = new Set(current.keywords.map((k) => k.toLowerCase()));
+  const scored = all
+    .filter((p) => p.slug !== slug)
+    .map((p) => ({
+      post: p,
+      score: p.keywords.reduce((n, k) => n + (own.has(k.toLowerCase()) ? 1 : 0), 0),
+    }))
+    .sort((a, b) => b.score - a.score || b.post.date.localeCompare(a.post.date));
+
+  return scored.slice(0, limit).map((s) => stripBody(s.post));
+}
+
+function stripBody(p: Post): Omit<Post, "body"> {
+  const { body: _body, ...rest } = p;
+  return rest;
+}

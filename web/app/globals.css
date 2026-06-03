@@ -159,18 +159,44 @@ body {
 }
 .article-body ul,
 .article-body ol {
-  margin: 0 0 1.2rem;
-  padding-left: 1.4rem;
+  margin: 0 0 1.3rem;
+  padding: 0;
+  list-style: none;
 }
 .article-body li {
-  margin: 0.35rem 0;
+  position: relative;
+  margin: 0.55rem 0;
+  padding-left: 1.9rem;
 }
-.article-body ul li::marker {
-  color: var(--color-green-deep);
+/* Neženklintas sąrašas — kietas žalias kvadratėlis (chunky), ne plonas taškas. */
+.article-body ul > li::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0.55em;
+  width: 0.7rem;
+  height: 0.7rem;
+  background: var(--color-green);
+  border: 2px solid var(--color-ink);
+  border-radius: 3px;
 }
-.article-body ol li::marker {
+/* Numeruotas sąrašas — drąsus display skaičius su žalia spalva. */
+.article-body ol {
+  counter-reset: article-ol;
+}
+.article-body ol > li {
+  counter-increment: article-ol;
+  padding-left: 2.3rem;
+}
+.article-body ol > li::before {
+  content: counter(article-ol) ".";
+  position: absolute;
+  left: 0;
+  top: 0;
   font-family: var(--font-display);
-  font-weight: 700;
+  font-weight: 800;
+  font-size: 1.05rem;
+  line-height: 1.75;
   color: var(--color-green-deep);
 }
 .article-body strong {
@@ -187,6 +213,25 @@ body {
   padding: 0.2rem 0 0.2rem 1rem;
   font-style: italic;
   color: var(--color-muted);
+}
+
+/* --------------------------------------------------------------------------
+   .news-carousel — „Kažkas jus gali sudominti" horizontali juosta.
+   Plonas chunky scrollbar; nesikerta su kortelės šešėliu (padding apačioj).
+   -------------------------------------------------------------------------- */
+.news-carousel {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-ink) transparent;
+}
+.news-carousel::-webkit-scrollbar {
+  height: 8px;
+}
+.news-carousel::-webkit-scrollbar-track {
+  background: transparent;
+}
+.news-carousel::-webkit-scrollbar-thumb {
+  background: var(--color-ink);
+  border-radius: 4px;
 }
 
 /* Pagarba „mažiau judesio" nustatymui. */
