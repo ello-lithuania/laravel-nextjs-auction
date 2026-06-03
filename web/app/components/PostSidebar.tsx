@@ -1,14 +1,27 @@
 import Link from "next/link";
 import type { Post } from "../lib/posts";
+import type { Heading } from "../lib/article";
+import TableOfContents from "./TableOfContents";
 
 const formatDate = (iso: string) =>
   new Date(iso).toLocaleDateString("lt-LT", { year: "numeric", month: "long", day: "numeric" });
 
-// Single post šoninė juosta (desktop). Sticky. CTA + „Populiaru" sąrašas.
-// Be hooks — tinka serverio komponentui.
-export default function PostSidebar({ related }: { related: Omit<Post, "body">[] }) {
+// Single post šoninė juosta (desktop). Sticky. Turinys + CTA + „Populiaru" sąrašas.
+// Be hooks — tinka serverio komponentui (TOC pats yra klientinis).
+export default function PostSidebar({
+  related,
+  headings = [],
+}: {
+  related: Omit<Post, "body">[];
+  headings?: Heading[];
+}) {
   return (
     <aside className="flex flex-col gap-6 lg:sticky lg:top-24">
+      {/* Turinys (scroll-spy) — paslepiam mobile, ten jis netinka sticky */}
+      <div className="hidden lg:block">
+        <TableOfContents headings={headings} />
+      </div>
+
       {/* CTA — parduok savo daiktą */}
       <div className="rounded-chunk border-[2.5px] border-ink bg-green p-5 text-white shadow-chunky">
         <span className="text-[28px] leading-none">🔨</span>

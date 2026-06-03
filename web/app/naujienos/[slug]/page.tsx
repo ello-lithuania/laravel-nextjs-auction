@@ -7,7 +7,9 @@ import SiteFooter from "../../components/SiteFooter";
 import ShareButtons from "../../components/ShareButtons";
 import PostSidebar from "../../components/PostSidebar";
 import RelatedPosts from "../../components/RelatedPosts";
+import ReadingProgress from "../../components/ReadingProgress";
 import { getAllPosts, getPostBySlug, getRelatedPosts } from "../../lib/posts";
+import { addHeadingIds, autoLinkBody, extractFaq, extractHeadings } from "../../lib/article";
 
 const SITE = "https://dekaukciona.lt";
 
@@ -61,10 +63,13 @@ export default async function NewsArticlePage({
   if (!article) notFound();
 
   const related = getRelatedPosts(slug, 6);
-  const html = marked.parse(article.body) as string;
+  const headings = extractHeadings(article.body);
+  const faqs = extractFaq(article.body);
+  // Auto-sujungiam su kitais straipsniais (SEO), pridedam heading ID'us (TOC).
+  const html = addHeadingIds(marked.parse(autoLinkBody(article.body, slug)) as string);
 
   // SEO: Article struktūruoti duomenys (schema.org).
-  const jsonLd = {
+  const articleLd = {
     "@context": "https://schema.org",
     "@type": "Article",
     headline: article.title,
@@ -81,19 +86,59 @@ export default async function NewsArticlePage({
     mainEntityOfPage: { "@type": "WebPage", "@id": `${SITE}/naujienos/${article.slug}` },
   };
 
+  // SEO: naršymo kelio struktūra.
+  const breadcrumbLd = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      { "@type": "ListItem", position: 1, name: "Pagrindinis", item: `${SITE}/` },
+      { "@type": "ListItem", position: 2, name: "Naujienos", item: `${SITE}/naujienos` },
+      { "@type": "ListItem", position: 3, name: article.title, item: `${SITE}/naujienos/${article.slug}` },
+    ],
+  };
+
+  // SEO: FAQ rich results (tik jei straipsnis turi „Dažni klausimai").
+  const faqLd =
+    faqs.length > 0
+      ? {
+          "@context": "https://schema.org",
+          "@type": "FAQPage",
+          mainEntity: faqs.map((f) => ({
+            "@type": "Question",
+            name: f.q,
+            acceptedAnswer: { "@type": "Answer", text: f.a },
+          })),
+        }
+      : null;
+
+  const schemas = [articleLd, breadcrumbLd, ...(faqLd ? [faqLd] : [])];
+
   return (
     <main className="flex min-h-screen flex-col bg-cream text-ink">
+      <ReadingProgress />
       <SiteHeader />
 
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(schemas) }}
       />
 
       <div className="mx-auto w-full max-w-7xl flex-1 px-5 py-10 lg:px-8 lg:py-14">
-        <Link href="/naujienos" className="text-sm font-bold text-muted hover:text-ink">
-          ← Visos naujienos
-        </Link>
+        {/* Naršymo kelias */}
+        <nav
+          aria-label="Naršymo kelias"
+          className="flex flex-wrap items-center gap-1.5 text-sm font-semibold text-muted"
+        >
+          <Link href="/" className="hover:text-ink">
+            Pagrindinis
+          </Link>
+          <span aria-hidden>›</span>
+          <Link href="/naujienos" className="hover:text-ink">
+            Naujienos
+          </Link>
+          <span aria-hidden>›</span>
+          <span className="line-clamp-1 max-w-[55vw] text-ink">{article.title}</span>
+        </nav>
 
         <div className="mt-6 grid gap-10 lg:grid-cols-[minmax(0,1fr)_320px] lg:gap-12">
           {/* Pagrindinis turinys */}
@@ -133,7 +178,7 @@ export default async function NewsArticlePage({
           </article>
 
           {/* Šoninė juosta */}
-          <PostSidebar related={related} />
+          <PostSidebar related={related} headings={headings} />
         </div>
 
         {/* Susijusių straipsnių karuselė */}
