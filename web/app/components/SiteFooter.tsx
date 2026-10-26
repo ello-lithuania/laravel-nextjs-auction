@@ -41,9 +41,15 @@ export default function SiteFooter() {
             </div>
           </div>
         </div>
-        <p className="mt-10 border-t border-cream/15 pt-6 text-xs text-cream/50">
-          © {new Date().getFullYear()} Dekaukciona. Visos teisės saugomos.
-        </p>
+        <div className="mt-10 flex flex-col gap-2 border-t border-cream/15 pt-6 text-xs text-cream/50 sm:flex-row sm:justify-between">
+          <p>© {new Date().getFullYear()} Dekaukciona. Visos teisės saugomos.</p>
+          <p>
+            Svetainę sukūrė{" "}
+            <a href="https://kokybiskasvetaine.lt/" className="hover:text-cream">
+              kokybiskasvetaine.lt
+            </a>
+          </p>
+        </div>
       </div>
     </footer>
   );
