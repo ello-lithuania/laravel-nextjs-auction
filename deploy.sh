@@ -17,12 +17,12 @@ set -euo pipefail
 # under ~/domains/ is still named after the old (plum-mouse) address, set
 # API_DIR/WEB_DIR explicitly instead of deriving them from $DOMAIN.
 DOMAIN=dekaukciona.lt
-SSH_HOST=46.202.142.44
+SSH_HOST=45.84.206.108
 SSH_PORT=65002
-SSH_USER=u984572075
+SSH_USER=u691429546
 SSH_KEY="$HOME/.ssh/hostinger_deploy"
-API_DIR=/home/u984572075/domains/$DOMAIN/laravel-api
-WEB_DIR=/home/u984572075/domains/$DOMAIN/public_html
+API_DIR=/home/u691429546/domains/$DOMAIN/laravel-api
+WEB_DIR=/home/u691429546/domains/$DOMAIN/public_html
 API_URL=https://$DOMAIN/backend
 SITE_URL=https://$DOMAIN
 REVERB_HOST=$DOMAIN
